@@ -1,10 +1,19 @@
 #include "bridge/core/error_codes.hpp"
+#include <algorithm>
+#include <cctype>
 
 namespace bridge::core {
 namespace {
 
 bool contains(const std::string& text, const std::string& needle) {
   return text.find(needle) != std::string::npos;
+}
+
+std::string lowercase(std::string text) {
+  std::transform(text.begin(), text.end(), text.begin(), [](unsigned char c) {
+    return static_cast<char>(std::tolower(c));
+  });
+  return text;
 }
 
 } // namespace
@@ -26,7 +35,17 @@ ErrorInfo classify_common_error(const std::string& message, const std::string& f
 ErrorInfo classify_search_error(const std::string& message, bool timed_out, bool cancelled) {
   if (cancelled) return {"REQUEST_CANCELLED", message.empty() ? "request cancelled" : message};
   if (timed_out) return {"SEARCH_TIMEOUT", message.empty() ? "search timeout" : message};
-  if (contains(message, "Mismatched") || contains(message, "Invalid") || contains(message, "regex_error") || contains(message, "Unexpected")) {
+  const auto folded = lowercase(message);
+  if (contains(message, "regex_error") ||
+      contains(message, "Mismatched") ||
+      contains(message, "Invalid") ||
+      contains(message, "Unexpected") ||
+      contains(folded, "mismatch") ||
+      contains(folded, "regex") ||
+      contains(folded, "regular expression") ||
+      contains(folded, "unexpected") ||
+      contains(folded, "bracket") ||
+      contains(folded, "parenth")) {
     return {"INVALID_PARAMS", message};
   }
   return classify_common_error(message, "SEARCH_FAILED");
