@@ -10,7 +10,26 @@ param(
 $ErrorActionPreference = "Stop"
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 
-cmake -S . -B $BuildDir -G "Visual Studio 17 2022" -A x64
+function Get-CmakeGenerator {
+  param([string]$BuildDir)
+
+  $cachePath = Join-Path $BuildDir 'CMakeCache.txt'
+  if (-not (Test-Path $cachePath)) {
+    return $null
+  }
+
+  $line = Select-String -Path $cachePath -Pattern '^CMAKE_GENERATOR:INTERNAL=' | Select-Object -First 1
+  if ($null -eq $line) {
+    return $null
+  }
+
+  return ($line.Line -replace '^CMAKE_GENERATOR:INTERNAL=', '')
+}
+
+$cmakeGenerator = Get-CmakeGenerator -BuildDir $BuildDir
+if (-not $cmakeGenerator) {
+  cmake -S . -B $BuildDir -G "Visual Studio 17 2022" -A x64
+}
 cmake --build $BuildDir --config $Config --parallel $Jobs
 if ($RunTests) {
   ctest --test-dir $BuildDir -C $Config --output-on-failure

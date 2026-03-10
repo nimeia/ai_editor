@@ -11,8 +11,8 @@ int main() {
   fs::remove_all(root);
   fs::create_directories(root / "docs");
   fs::create_directories(root / "node_modules" / "pkg");
-  std::ofstream(root / "docs" / "readme.md") << "line1\nline2\nline3\n";
-  std::ofstream(root / "node_modules" / "pkg" / "index.js") << "module.exports = 1;\n";
+  std::ofstream(root / "docs" / "readme.md", std::ios::binary) << "line1\nline2\nline3\n";
+  std::ofstream(root / "node_modules" / "pkg" / "index.js", std::ios::binary) << "module.exports = 1;\n";
 
   auto cfg = bridge::core::make_default_workspace_config(root.string());
 

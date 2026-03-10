@@ -25,8 +25,14 @@ function Get-JsonValue {
     if ($segment -match '^(?<name>[^\[]+)(\[(?<index>\d+)\])?$') {
       $name = $Matches['name']
       if ($null -eq $current) { return $null }
-      $current = $current.$name
-      if ($Matches['index'] -ne '') {
+      if ($current -is [System.Collections.IDictionary]) {
+        $current = $current[$name]
+      } else {
+        $property = $current.PSObject.Properties[$name]
+        if ($null -eq $property) { return $null }
+        $current = $property.Value
+      }
+      if ($Matches.ContainsKey('index') -and -not [string]::IsNullOrEmpty($Matches['index'])) {
         $index = [int]$Matches['index']
         if ($null -eq $current -or $current.Count -le $index) { return $null }
         $current = $current[$index]
@@ -95,26 +101,34 @@ function Assert-JsonLenGe {
 }
 
 function Invoke-BridgeCli {
-  param([string[]]$Args)
-  $output = & $script:BridgeCli @Args
+  param([string[]]$CommandArgs)
+  $output = & $script:BridgeCli @CommandArgs
   if ($LASTEXITCODE -ne 0) {
-    throw "bridge_cli failed: $($Args -join ' ')`n$([string]::Join("`n", $output))"
+    $joinedOutput = if ($null -eq $output) { '' } else { [string]::Join("`n", $output) }
+    throw "bridge_cli failed: $($CommandArgs -join ' ')`n$joinedOutput"
+  }
+  if ($null -eq $output) {
+    return ''
   }
   return [string]::Join("`n", $output)
 }
 
 function Invoke-BridgeCliAllowFail {
-  param([string[]]$Args)
-  $output = & $script:BridgeCli @Args 2>&1
+  param([string[]]$CommandArgs)
+  $output = & $script:BridgeCli @CommandArgs 2>&1
+  $text = ''
+  if ($null -ne $output) {
+    $text = [string]::Join("`n", $output)
+  }
   return @{
     ExitCode = $LASTEXITCODE
-    Text = [string]::Join("`n", $output)
+    Text = $text
   }
 }
 
 function Invoke-BridgeCliJson {
-  param([string[]]$Args)
-  $text = Invoke-BridgeCli $Args
+  param([string[]]$CommandArgs)
+  $text = Invoke-BridgeCli $CommandArgs
   return @{
     Text = $text
     Json = ($text | ConvertFrom-Json)
@@ -125,14 +139,42 @@ function Wait-BridgeReady {
   param([int]$Attempts = 30, [int]$DelayMs = 250)
   for ($i = 0; $i -lt $Attempts; $i++) {
     Start-Sleep -Milliseconds $DelayMs
-    try {
-      $ping = Invoke-BridgeCli @('ping', '--workspace', $script:BridgeWorkspace, '--json')
-      if ($ping.Contains('"ok":true')) { return }
-    } catch {
-      if ($i -eq ($Attempts - 1)) { throw }
+    $stdoutPath = Join-Path $script:BridgeRunDir 'wait-ready.stdout.log'
+    $stderrPath = Join-Path $script:BridgeRunDir 'wait-ready.stderr.log'
+    Remove-Item -Force $stdoutPath, $stderrPath -ErrorAction SilentlyContinue
+    $probe = Start-Process -FilePath $script:BridgeCli `
+      -ArgumentList ('ping "--workspace" "{0}" "--json"' -f ($script:BridgeWorkspace -replace '"', '\"')) `
+      -Wait `
+      -PassThru `
+      -NoNewWindow `
+      -RedirectStandardOutput $stdoutPath `
+      -RedirectStandardError $stderrPath
+    $ping = if (Test-Path $stdoutPath) { Get-Content $stdoutPath -Raw } else { '' }
+    if ($probe.ExitCode -eq 0 -and $ping.Contains('"ok":true')) {
+      $global:LASTEXITCODE = 0
+      return
+    }
+    if ($i -eq ($Attempts - 1)) {
+      $stderrText = if (Test-Path $stderrPath) { Get-Content $stderrPath -Raw } else { '' }
+      $detail = ($ping + "`n" + $stderrText).Trim()
+      throw "daemon did not become ready`n$detail"
     }
   }
   throw 'daemon did not become ready'
+}
+
+function Stop-BridgeDaemonProcesses {
+  if ([string]::IsNullOrEmpty($script:BridgeDaemon)) {
+    return
+  }
+  Get-CimInstance Win32_Process |
+    Where-Object { $_.ExecutablePath -eq $script:BridgeDaemon } |
+    ForEach-Object {
+      try {
+        Stop-Process -Id $_.ProcessId -Force -ErrorAction Stop
+      } catch {
+      }
+    }
 }
 
 function Start-BridgeDaemon {
@@ -143,8 +185,11 @@ function Start-BridgeDaemon {
   $script:BridgeDaemonStdoutLog = Join-Path $script:BridgeRunDir "$Name.out.log"
   $script:BridgeDaemonStderrLog = Join-Path $script:BridgeRunDir "$Name.err.log"
   Remove-Item -Force $script:BridgeDaemonStdoutLog, $script:BridgeDaemonStderrLog -ErrorAction SilentlyContinue
+  Stop-BridgeDaemonProcesses
   Write-BridgeLog "starting daemon for workspace: $script:BridgeWorkspace"
-  $script:BridgeDaemonProc = Start-Process -FilePath $script:BridgeDaemon -ArgumentList @('--workspace', $script:BridgeWorkspace) + $ExtraArgs -PassThru -RedirectStandardOutput $script:BridgeDaemonStdoutLog -RedirectStandardError $script:BridgeDaemonStderrLog
+  $daemonArgs = @('--workspace', $script:BridgeWorkspace) + $ExtraArgs
+  $daemonArgLine = [string]::Join(' ', ($daemonArgs | ForEach-Object { '"{0}"' -f ($_ -replace '"', '\"') }))
+  $script:BridgeDaemonProc = Start-Process -FilePath $script:BridgeDaemon -ArgumentList $daemonArgLine -PassThru -RedirectStandardOutput $script:BridgeDaemonStdoutLog -RedirectStandardError $script:BridgeDaemonStderrLog
   Wait-BridgeReady
 }
 

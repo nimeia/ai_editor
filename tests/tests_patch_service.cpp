@@ -35,7 +35,7 @@ int main() {
   const fs::path root = fs::temp_directory_path() / "ai_bridge_patch_service_test";
   fs::remove_all(root);
   fs::create_directories(root / "docs");
-  std::ofstream(root / "docs" / "readme.md") << "hello\nworld\n";
+  std::ofstream(root / "docs" / "readme.md", std::ios::binary) << "hello\nworld\n";
 
   auto cfg = bridge::core::make_default_workspace_config(root.string());
 
@@ -149,10 +149,10 @@ int main() {
   assert(evicted_apply.error == "preview evicted");
   set_env_var("AI_BRIDGE_PREVIEW_KEEP", "2");
 
-  std::ofstream(root / "docs" / "readme.md") << "changed externally\n";
+  std::ofstream(root / "docs" / "readme.md", std::ios::binary) << "changed externally\n";
   auto conflict_preview = bridge::core::patch_preview(cfg, "docs/readme.md", "other\n");
   assert(conflict_preview.ok);
-  std::ofstream(root / "docs" / "readme.md") << "changed twice externally\n";
+  std::ofstream(root / "docs" / "readme.md", std::ios::binary) << "changed twice externally\n";
   auto conflict = bridge::core::patch_apply(cfg,
                                             "docs/readme.md",
                                             "",

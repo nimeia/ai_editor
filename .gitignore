@@ -1,5 +1,4 @@
-/build/
-/build_local/
+/build*/
 /.idea/
 /.vscode/
 *.o
@@ -11,3 +10,4 @@
 *.exe
 *.log
 *.sock
+/.p6*/

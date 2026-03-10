@@ -11,6 +11,9 @@ add_library(bridge_core
 )
 
 target_include_directories(bridge_core PUBLIC include ${AI_BRIDGE_VERSION_HEADER_DIR})
-target_link_libraries(bridge_core PUBLIC stdc++fs)
+
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9)
+  target_link_libraries(bridge_core PUBLIC stdc++fs)
+endif()
 
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})

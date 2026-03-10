@@ -34,9 +34,10 @@ add_test(NAME test_bridge_cli_version COMMAND $<TARGET_FILE:bridge_cli> --versio
 add_test(NAME test_bridge_daemon_version COMMAND $<TARGET_FILE:bridge_daemon> --version)
 
 if(WIN32)
+  find_program(AI_BRIDGE_POWERSHELL NAMES pwsh powershell REQUIRED)
   add_test(
     NAME test_functional_windows_native
-    COMMAND pwsh -File ${CMAKE_CURRENT_SOURCE_DIR}/functional_windows_native.ps1 $<TARGET_FILE:bridge_daemon> $<TARGET_FILE:bridge_cli> ${CMAKE_CURRENT_BINARY_DIR}
+    COMMAND ${AI_BRIDGE_POWERSHELL} -File ${CMAKE_CURRENT_SOURCE_DIR}/functional_windows_native.ps1 $<TARGET_FILE:bridge_daemon> $<TARGET_FILE:bridge_cli> ${CMAKE_CURRENT_BINARY_DIR}
   )
   set_tests_properties(test_functional_windows_native PROPERTIES ENVIRONMENT "CTEST_OUTPUT_ON_FAILURE=1")
 else()

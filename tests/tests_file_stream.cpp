@@ -31,7 +31,7 @@ int main() {
   const fs::path root = fs::temp_directory_path() / "ai_bridge_file_stream_test";
   fs::remove_all(root);
   fs::create_directories(root / "docs");
-  std::ofstream(root / "docs" / "big.txt") << "line1\nline2\nline3\nline4\n";
+  std::ofstream(root / "docs" / "big.txt", std::ios::binary) << "line1\nline2\nline3\nline4\n";
 
   auto cfg = bridge::core::make_default_workspace_config(root.string());
 

@@ -10,6 +10,36 @@ param(
 
 $ErrorActionPreference = "Stop"
 $RepoRoot = (Resolve-Path -LiteralPath ".").Path
+
+function Get-CmakeGenerator {
+  param([string]$BuildDir)
+
+  $cachePath = Join-Path $BuildDir 'CMakeCache.txt'
+  if (-not (Test-Path $cachePath)) {
+    return $null
+  }
+
+  $line = Select-String -Path $cachePath -Pattern '^CMAKE_GENERATOR:INTERNAL=' | Select-Object -First 1
+  if ($null -eq $line) {
+    return $null
+  }
+
+  return ($line.Line -replace '^CMAKE_GENERATOR:INTERNAL=', '')
+}
+
+function Get-PowerShellExe {
+  $cmd = Get-Command pwsh -ErrorAction SilentlyContinue
+  if ($cmd) {
+    return $cmd.Source
+  }
+  $cmd = Get-Command powershell -ErrorAction SilentlyContinue
+  if ($cmd) {
+    return $cmd.Source
+  }
+  throw 'neither pwsh nor powershell is available'
+}
+
+$PowerShellExe = Get-PowerShellExe
 $script:ValidationSummary = [ordered]@{
   script = "scripts/validate_v1.ps1"
   platform = "windows"
@@ -186,7 +216,10 @@ try {
   Add-ValidationNote "Run this script on a real Windows host to complete native sign-off."
 
   Invoke-ValidationStep -Name 'configure' -Action {
-    cmake -S . -B $BuildDir -G "Visual Studio 17 2022" -A x64
+    $generator = Get-CmakeGenerator -BuildDir $BuildDir
+    if (-not $generator) {
+      cmake -S . -B $BuildDir -G "Visual Studio 17 2022" -A x64
+    }
   }
 
   Invoke-ValidationStep -Name 'build' -Action {
@@ -198,7 +231,7 @@ try {
   }
 
   Invoke-ValidationStep -Name 'windows_smoke' -Action {
-    pwsh ./scripts/windows_smoke.ps1 -BuildDir $BuildDir -Config $Config
+    & $PowerShellExe -File ./scripts/windows_smoke.ps1 -BuildDir $BuildDir -Config $Config
   }
 
   Invoke-ValidationStep -Name 'prepare_output_dirs' -Action {
@@ -218,7 +251,7 @@ try {
   }
 
   Invoke-ValidationStep -Name 'package' -Action {
-    pwsh ./scripts/package_release.ps1 -BuildDir $BuildDir -Config $Config -OutDir $DistDir -Generator ZIP -Jobs $Jobs
+    & $PowerShellExe -File ./scripts/package_release.ps1 -BuildDir $BuildDir -Config $Config -OutDir $DistDir -Generator ZIP -Jobs $Jobs
     Update-ValidationArtifacts
     if (-not $script:ValidationSummary.checksum_file) {
       throw 'SHA256SUMS.txt missing'
