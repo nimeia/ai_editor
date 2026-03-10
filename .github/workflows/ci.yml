@@ -40,7 +40,7 @@ jobs:
 
       - name: Validate V1 baseline
         shell: bash
-        run: ./scripts/validate_v1.sh --build-dir build --config Release --jobs 1
+        run: bash ./scripts/validate_v1.sh --build-dir build --config Release --jobs 1
 
       - name: Upload validation artifacts
         if: always()
