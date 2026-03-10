@@ -1,0 +1,75 @@
+# Tasks
+
+## Completed
+
+- [x] Repository skeleton initialized with Git
+- [x] Cross-platform document set added to `docs/`
+- [x] Core / platform / transport modular CMake layout
+- [x] POSIX local IPC baseline
+- [x] Handshake (`hello` / `hello_ack`)
+- [x] `daemon.ping`
+- [x] `workspace.info`
+- [x] `workspace.open`
+- [x] M2 path normalization and workspace containment checks
+- [x] M2 default soft-exclude policy (`skip_by_default`)
+- [x] M2 unit + integration tests
+- [x] M3 FileService: `fs.list`, `fs.stat`, `fs.read`, `fs.read_range`
+- [x] M3 binary/text detection + encoding metadata baseline
+- [x] M4 `search.text` / `search.regex`
+- [x] M4 search unit + integration tests
+- [x] M5 patch preview/apply/rollback/history
+- [x] M5 patch unit + integration tests
+- [x] M6 runtime log + audit log baseline
+- [x] M6 logging integration test
+- [x] Platform/transport family split (POSIX vs Windows)
+- [x] Windows transport/runtime adapter completion baseline
+- [x] Windows named pipe native smoke script
+- [x] GitHub Actions Linux + Windows CI baseline
+- [x] GitHub Actions macOS CI baseline
+- [x] GitHub Actions release workflow baseline (tag + workflow_dispatch)
+- [x] `--json` / human-friendly dual output mode refinement
+- [x] stronger error code normalization
+- [x] runtime / audit log rotation policy baseline
+- [x] logging rotation unit + integration tests
+- [x] richer audit metadata (duration, endpoint, size summaries)
+- [x] history log rotation / cleanup policy
+- [x] Windows native CI result review and follow-up fixes (round 2: unicode/space path coverage, runtime/platform diagnostics, smoke reuse of existing build dir)
+- [x] request cancel / timeout enforcement baseline on transport side
+- [x] streaming / chunked response design for large results
+- [x] extend cancellation enforcement beyond search requests
+- [x] Streaming / chunked response baseline for search methods
+- [x] CLI `--stream` support with JSON and human-readable output
+- [x] Transport streaming frames over the same hello/request connection
+- [x] Integration coverage for streaming search
+- [x] Integration coverage for streaming file reads
+- [x] Streaming patch preview large diff baseline
+- [x] Cancellation enforcement for streaming file reads
+- [x] transaction-like patch preview/apply via preview_id
+- [x] Windows unit-test environment portability fixes
+- [x] Windows native PowerShell integration coverage in CTest
+- [x] Windows unicode / space-path native integration coverage
+- [x] Windows functional native test helper baseline
+- [x] Windows functional native script alignment with POSIX helper style
+- [x] Windows smoke script reuse of existing build output + daemon log dump on failure
+- [x] workspace.info / workspace.open runtime diagnostics fields
+- [x] unify stream final summary metadata (`stream_event`, `chunk_count`, `cancelled`, `timed_out`)
+- [x] extend `timeout_ms` enforcement to streaming file reads and streaming patch preview
+- [x] integration coverage for timeout handling across search/read/patch preview
+- [x] patch preview lifecycle states (`applied` / `expired` / `evicted` / `invalid`)
+- [x] richer patch conflict diagnostics (`mtime_changed` / `hash_changed` / `mtime_and_hash_changed`)
+- [x] patch rollback result now returns restored hash / mtime
+- [x] P4 documentation sync: README / protocol / plan / run-guide aligned with current code state
+- [x] P5 release engineering baseline
+- [x] version / artifact naming conventions
+- [x] `cmake --install` install layout baseline
+- [x] CPack archive packaging baseline
+- [x] packaging / release script baseline
+- [x] deployment / runtime directory notes for release consumption
+- [x] `bridge_cli` / `bridge_daemon` `--version` output baseline
+
+## Next
+
+- [x] P6 Linux validation rerun + validation/report scripts baseline
+- [x] P6 Windows validation script structured summary output baseline
+- [ ] P6 Windows native rerun on a real Windows host
+- [x] final V1 release checklist

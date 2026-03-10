@@ -1,0 +1,13 @@
+/build/
+/build_local/
+/.idea/
+/.vscode/
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+*.log
+*.sock

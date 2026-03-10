@@ -1,0 +1,92 @@
+name: ci
+
+on:
+  push:
+    tags-ignore:
+      - 'v*'
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate_posix:
+    name: validate-${{ matrix.id }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: linux
+            runner: ubuntu-latest
+          - id: macos
+            runner: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show toolchain
+        shell: bash
+        run: |
+          uname -a
+          cmake --version
+          ctest --version
+          python3 --version
+
+      - name: Validate V1 baseline
+        shell: bash
+        run: ./scripts/validate_v1.sh --build-dir build --config Release --jobs 1
+
+      - name: Upload validation artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validate-${{ matrix.id }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            .p6_validation_dist/**
+            .p6_validation_install/**
+            .p6_validation_workspace/.bridge/**
+            build/Testing/**
+            build/**/Testing/**
+
+  validate_windows:
+    name: validate-windows
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show toolchain
+        shell: pwsh
+        run: |
+          $PSVersionTable.PSVersion.ToString()
+          cmake --version
+          ctest --version
+          python --version
+          gh --version
+
+      - name: Validate V1 baseline
+        shell: pwsh
+        run: pwsh ./scripts/validate_v1.ps1 -BuildDir build -Config Release -Jobs 1
+
+      - name: Upload validation artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validate-windows
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            .p6_validation_dist/**
+            .p6_validation_install/**
+            .p6_validation_summary/**
+            .p6_validation_workspace/.bridge/**
+            build/Testing/**
+            build/**/Testing/**
