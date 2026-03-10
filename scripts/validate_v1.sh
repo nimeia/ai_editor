@@ -44,8 +44,8 @@ done
 cmake -S . -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE="$CONFIG"
 cmake --build "$BUILD_DIR" --parallel "$JOBS"
 ctest --test-dir "$BUILD_DIR" --output-on-failure -E "test_integration_(patch_stream|timeout)_ops"
-/usr/bin/bash "$(pwd)/tests/integration_patch_stream_ops.sh" "$(pwd)/$BUILD_DIR/apps/bridge_daemon/bridge_daemon" "$(pwd)/$BUILD_DIR/apps/bridge_cli/bridge_cli" "$(pwd)/$BUILD_DIR/tests"
-/usr/bin/bash "$(pwd)/tests/integration_timeout_ops.sh" "$(pwd)/$BUILD_DIR/apps/bridge_daemon/bridge_daemon" "$(pwd)/$BUILD_DIR/apps/bridge_cli/bridge_cli" "$(pwd)/$BUILD_DIR/tests"
+bash "$(pwd)/tests/integration_patch_stream_ops.sh" "$(pwd)/$BUILD_DIR/apps/bridge_daemon/bridge_daemon" "$(pwd)/$BUILD_DIR/apps/bridge_cli/bridge_cli" "$(pwd)/$BUILD_DIR/tests"
+bash "$(pwd)/tests/integration_timeout_ops.sh" "$(pwd)/$BUILD_DIR/apps/bridge_daemon/bridge_daemon" "$(pwd)/$BUILD_DIR/apps/bridge_cli/bridge_cli" "$(pwd)/$BUILD_DIR/tests"
 
 rm -rf "$WORK_DIR" "$INSTALL_DIR" "$DIST_DIR"
 mkdir -p "$WORK_DIR/docs"
