@@ -96,13 +96,11 @@ import json, pathlib, sys
 print(json.loads(pathlib.Path(sys.argv[1]).read_text())["result"]["preview_id"])
 PY
 )
-"$CLI" patch-apply --workspace "$WORK_DIR" --path docs/sample.txt --preview-id "$PREVIEW_ID" >/dev/null
+"$CLI" patch-apply --workspace "$WORK_DIR" --preview-id "$PREVIEW_ID" --json > "$WORK_DIR/apply.json"
 "$CLI" history --workspace "$WORK_DIR" --path docs/sample.txt >/dev/null
-BACKUP_ID=$(python3 - <<'PY' "$WORK_DIR/.bridge/history.log"
+BACKUP_ID=$(python3 - <<'PY' "$WORK_DIR/apply.json"
 import json, pathlib, sys
-lines = [line for line in pathlib.Path(sys.argv[1]).read_text().splitlines() if line.strip()]
-assert lines, "history.log is empty"
-print(json.loads(lines[-1])["backup_id"])
+print(json.loads(pathlib.Path(sys.argv[1]).read_text())["result"]["backup_id"])
 PY
 )
 "$CLI" patch-rollback --workspace "$WORK_DIR" --path docs/sample.txt --backup-id "$BACKUP_ID" >/dev/null

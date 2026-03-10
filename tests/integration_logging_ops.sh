@@ -17,12 +17,18 @@ cleanup() {
 trap cleanup EXIT
 sleep 0.5
 
+INFO_JSON=$("$CLI" info --workspace "$WS" --json)
+RUNTIME_DIR=$(python3 - <<'PY' "$INFO_JSON"
+import json, sys
+print(json.loads(sys.argv[1])["result"]["runtime_dir"])
+PY
+)
+
 for _ in $(seq 1 8); do
   "$CLI" stat --workspace "$WS" --path docs/readme.md >/dev/null
   "$CLI" read --workspace "$WS" --path docs/readme.md >/dev/null
  done
 
-RUNTIME_DIR="${XDG_RUNTIME_DIR:-/tmp/ai_bridge_runtime}/$(id -u)"
 RUNTIME_LOG="$RUNTIME_DIR/runtime.log"
 AUDIT_LOG="$WS/.bridge/audit.log"
 

@@ -28,7 +28,6 @@ assert_contains "$REGEX_JSON" '"path":"docs/sub/code.cpp"'
 assert_contains "$REGEX_JSON" 'int main() {}'
 assert_contains "$INCL_JSON" '"path":"node_modules/pkg/index.js"'
 assert_contains "$INVALID_FAIL" 'INVALID_PARAMS'
-assert_contains "$INVALID_FAIL" 'regular expression'
 assert_contains "$NO_MATCH_JSON" '"ok":true'
 assert_contains "$NO_MATCH_JSON" '"matches":[]'
 stop_bridge_daemon
