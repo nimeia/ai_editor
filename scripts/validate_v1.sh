@@ -121,6 +121,6 @@ test -f "$INSTALL_DIR/share/ai_bridge/docs/10-v1-release-checklist.md"
 
 bash ./scripts/package_release.sh --build-dir "$BUILD_DIR" --config "$CONFIG" --out-dir "$DIST_DIR" --generator TGZ --jobs "$JOBS"
 test -f "$DIST_DIR/SHA256SUMS.txt"
-find "$DIST_DIR" -maxdepth 1 -type f \( -name '*.tar.gz' -o -name '*.tgz' \) | grep -q .
+find "$DIST_DIR" -maxdepth 1 -type f \( -name '*.tar.gz' -o -name '*.tgz' \) -print -quit | grep -q .
 
 echo "P6 validation complete"

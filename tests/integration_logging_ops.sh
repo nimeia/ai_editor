@@ -34,15 +34,15 @@ AUDIT_LOG="$WS/.bridge/audit.log"
 
 [[ -f "$RUNTIME_LOG" ]]
 [[ -f "$AUDIT_LOG" ]]
-cat "$RUNTIME_LOG"* | grep -q 'method=fs.stat'
-cat "$RUNTIME_LOG"* | grep -q 'method=fs.read'
-cat "$RUNTIME_LOG"* | grep -q 'duration_ms='
-cat "$RUNTIME_LOG"* | grep -q 'request_bytes='
-cat "$RUNTIME_LOG"* | grep -q 'response_bytes='
-cat "$AUDIT_LOG"* | grep -q $'fs.stat\tdocs/readme.md\t'
-cat "$AUDIT_LOG"* | grep -q $'fs.read\tdocs/readme.md\t'
-cat "$AUDIT_LOG"* | grep -q 'aibridge-'
-cat "$AUDIT_LOG"* | grep -q $'\tok\tfalse\t'
+grep -q 'method=fs.stat' "$RUNTIME_LOG"*
+grep -q 'method=fs.read' "$RUNTIME_LOG"*
+grep -q 'duration_ms=' "$RUNTIME_LOG"*
+grep -q 'request_bytes=' "$RUNTIME_LOG"*
+grep -q 'response_bytes=' "$RUNTIME_LOG"*
+grep -q $'fs.stat\tdocs/readme.md\t' "$AUDIT_LOG"*
+grep -q $'fs.read\tdocs/readme.md\t' "$AUDIT_LOG"*
+grep -q 'aibridge-' "$AUDIT_LOG"*
+grep -q $'\tok\tfalse\t' "$AUDIT_LOG"*
 
 for _ in $(seq 1 20); do
   [[ -f "$RUNTIME_LOG.1" && -f "$AUDIT_LOG.1" ]] && break

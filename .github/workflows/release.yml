@@ -30,6 +30,7 @@ permissions:
 
 env:
   RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  CHECKOUT_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
 
 jobs:
   package_posix:
@@ -46,10 +47,20 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
 
       - name: Build, validate, and package
         shell: bash
         run: bash ./scripts/validate_v1.sh --build-dir build --config Release --jobs 1
+
+      - name: Rename checksum file
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -f .p6_validation_dist/SHA256SUMS.txt ]]; then
+            mv .p6_validation_dist/SHA256SUMS.txt .p6_validation_dist/SHA256SUMS-${{ matrix.id }}.txt
+          fi
 
       - name: Upload release bundle
         uses: actions/upload-artifact@v4
@@ -67,10 +78,19 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
 
       - name: Build, validate, and package
         shell: pwsh
         run: pwsh ./scripts/validate_v1.ps1 -BuildDir build -Config Release -Jobs 1
+
+      - name: Rename checksum file
+        shell: pwsh
+        run: |
+          if (Test-Path .p6_validation_dist/SHA256SUMS.txt) {
+            Move-Item .p6_validation_dist/SHA256SUMS.txt .p6_validation_dist/SHA256SUMS-windows.txt -Force
+          }
 
       - name: Upload release bundle
         uses: actions/upload-artifact@v4
@@ -90,18 +110,22 @@ jobs:
       - package_posix
       - package_windows
     steps:
+      - name: Checkout release ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CHECKOUT_REF }}
+
       - name: Download packaged artifacts
         uses: actions/download-artifact@v4
         with:
           path: release-assets
           pattern: release-*
-          merge-multiple: true
 
       - name: Show packaged artifacts
         shell: bash
         run: |
           set -euo pipefail
-          ls -la release-assets
+          find release-assets -maxdepth 2 -type f | sort
 
       - name: Create or update release
         shell: bash
@@ -117,10 +141,13 @@ jobs:
             exit 1
           fi
 
+          target_commit=$(git rev-parse HEAD)
+          echo "Using release ref $CHECKOUT_REF at commit $target_commit"
+
           if gh release view "$tag" >/dev/null 2>&1; then
             echo "Release $tag already exists; assets will be replaced where names match."
           else
-            args=("$tag" --title "$tag" --target "$GITHUB_SHA" --generate-notes)
+            args=("$tag" --title "$tag" --target "$target_commit" --generate-notes)
             if [[ "$DRAFT" == "true" ]]; then
               args+=(--draft)
             fi
@@ -137,7 +164,7 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s nullglob
-          files=(release-assets/*)
+          mapfile -t files < <(find release-assets -type f | sort)
           if (( ${#files[@]} == 0 )); then
             echo "No release assets found" >&2
             exit 1
