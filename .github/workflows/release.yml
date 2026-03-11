@@ -57,6 +57,7 @@ jobs:
           name: release-${{ matrix.id }}
           if-no-files-found: error
           retention-days: 14
+          include-hidden-files: true
           path: |
             .p6_validation_dist/*
 
@@ -77,6 +78,7 @@ jobs:
           name: release-windows
           if-no-files-found: error
           retention-days: 14
+          include-hidden-files: true
           path: |
             .p6_validation_dist/*
             .p6_validation_summary/*
