@@ -187,7 +187,7 @@ P5 is now in place:
 - version-aware artifact naming
 - release packaging scripts for POSIX and Windows
 - `--version` support in both `bridge_cli` and `bridge_daemon`
-- package checksum file generation (`SHA256SUMS.txt`)
+- package checksum file generation (`SHA256SUMS.txt` locally, `SHA256SUMS-<platform>.txt` in GitHub Release assets)
 
 ### Install layout
 
