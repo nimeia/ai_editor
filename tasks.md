@@ -72,5 +72,6 @@
 - [x] P6 Linux validation rerun + validation/report scripts baseline
 - [x] P6 Windows validation script structured summary output baseline
 - [x] P6 test documentation sync for Windows matrix / execution order
+- [x] text editing baseline enhancement round 1 (`fs.write`, `fs.mkdir`, patch-create-missing-target, diff/diagnostic refinement)
 - [ ] P6 Windows native rerun on a real Windows host
 - [x] final V1 release checklist

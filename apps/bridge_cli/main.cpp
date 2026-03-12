@@ -76,6 +76,20 @@ std::string format_human(const std::string& command, const std::string& response
   if (command == "read" || command == "read-range") {
     return bridge::core::json_get_string(response, "content");
   }
+  if (command == "write") {
+    std::ostringstream oss;
+    oss << "path: " << bridge::core::json_get_string(response, "path") << "\n"
+        << "bytes_written: " << bridge::core::json_get_string(response, "bytes_written") << "\n"
+        << "created: " << bridge::core::json_get_string(response, "created") << "\n"
+        << "parent_created: " << bridge::core::json_get_string(response, "parent_created");
+    return oss.str();
+  }
+  if (command == "mkdir") {
+    std::ostringstream oss;
+    oss << "path: " << bridge::core::json_get_string(response, "path") << "\n"
+        << "created: " << bridge::core::json_get_string(response, "created");
+    return oss.str();
+  }
   if (command == "patch-preview") {
     std::ostringstream oss;
     const auto preview_id = bridge::core::json_get_string(response, "preview_id");
@@ -200,7 +214,7 @@ int main(int argc, char** argv) {
     }
   }
   if (argc < 2) {
-    std::cerr << "usage: bridge_cli <ping|info|open|resolve|list|stat|read|read-range|search-text|search-regex|cancel|patch-preview|patch-apply|patch-rollback|history> --workspace <path> [options]\n";
+    std::cerr << "usage: bridge_cli <ping|info|open|resolve|list|stat|read|read-range|write|mkdir|search-text|search-regex|cancel|patch-preview|patch-apply|patch-rollback|history> --workspace <path> [options]\n";
     return 1;
   }
 
@@ -240,7 +254,7 @@ int main(int argc, char** argv) {
     else if (arg == "--query" && i + 1 < argc) query = argv[++i];
     else if (arg == "--pattern" && i + 1 < argc) pattern = argv[++i];
     else if (arg == "--exts" && i + 1 < argc) exts_csv = argv[++i];
-    else if (arg == "--new-content-file" && i + 1 < argc) new_content_file = argv[++i];
+    else if ((arg == "--new-content-file" || arg == "--content-file") && i + 1 < argc) new_content_file = argv[++i];
     else if (arg == "--target-request-id" && i + 1 < argc) target_request_id = argv[++i];
     else if (arg == "--request-id" && i + 1 < argc) request_id = argv[++i];
     else if (arg == "--client-id" && i + 1 < argc) client_id = argv[++i];
@@ -280,6 +294,8 @@ int main(int argc, char** argv) {
       command == "stat" ? "fs.stat" :
       command == "read" ? "fs.read" :
       command == "read-range" ? "fs.read_range" :
+      command == "write" ? "fs.write" :
+      command == "mkdir" ? "fs.mkdir" :
       command == "search-text" ? "search.text" :
       command == "search-regex" ? "search.regex" :
       command == "cancel" ? "request.cancel" :
@@ -293,7 +309,7 @@ int main(int argc, char** argv) {
   }
 
   std::string new_content;
-  if (method == "patch.preview" || (method == "patch.apply" && preview_id.empty())) {
+  if (method == "fs.write" || method == "patch.preview" || (method == "patch.apply" && preview_id.empty())) {
     std::string read_error;
     new_content = slurp_file(new_content_file, &read_error);
     if (!read_error.empty()) {
@@ -322,6 +338,12 @@ int main(int argc, char** argv) {
   }
   if (method == "fs.read_range") {
     req << ",\"start_line\":" << start_line << ",\"end_line\":" << end_line << ",\"max_bytes\":" << max_bytes << ",\"stream\":" << (stream_enabled ? "true" : "false") << ",\"chunk_bytes\":" << chunk_bytes << ",\"timeout_ms\":" << timeout_ms;
+  }
+  if (method == "fs.write") {
+    req << ",\"content\":\"" << escape_json(new_content) << "\"";
+  }
+  if (method == "fs.mkdir") {
+    req << ",\"create_parents\":true";
   }
   if (method == "search.text") {
     req << ",\"query\":\"" << escape_json(query) << "\""

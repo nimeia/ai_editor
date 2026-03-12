@@ -74,6 +74,32 @@ int main() {
   assert(!missing_read.ok);
   assert(missing_read.error == "path not found");
 
+  auto mkdir_created = bridge::core::fs_mkdir(cfg, "docs/generated/nested");
+  assert(mkdir_created.ok);
+  assert(mkdir_created.created);
+  assert(fs::is_directory(root / "docs" / "generated" / "nested"));
+
+  auto mkdir_existing = bridge::core::fs_mkdir(cfg, "docs/generated");
+  assert(mkdir_existing.ok);
+  assert(!mkdir_existing.created);
+
+  auto write_created = bridge::core::fs_write(cfg, "docs/generated/nested/new.txt", "hello\nworld\n");
+  assert(write_created.ok);
+  assert(write_created.created);
+  assert(write_created.parent_created == false);
+  assert(slurp(root / "docs" / "generated" / "nested" / "new.txt") == "hello\nworld\n");
+
+  auto write_overwrite = bridge::core::fs_write(cfg, "docs/generated/nested/new.txt", "updated\n");
+  assert(write_overwrite.ok);
+  assert(!write_overwrite.created);
+  assert(slurp(root / "docs" / "generated" / "nested" / "new.txt") == "updated\n");
+
+  bridge::core::FsWriteOptions no_overwrite;
+  no_overwrite.overwrite = false;
+  auto write_exists_error = bridge::core::fs_write(cfg, "docs/generated/nested/new.txt", "again\n", no_overwrite);
+  assert(!write_exists_error.ok);
+  assert(write_exists_error.error == "path already exists");
+
   fs::remove_all(root);
   return 0;
 }

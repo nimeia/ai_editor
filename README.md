@@ -8,7 +8,7 @@ The repository is now at a **V1-ready baseline**:
 
 - M1: transport / handshake baseline completed
 - M2: workspace + path policy completed
-- M3: file service completed (`fs.list`, `fs.stat`, `fs.read`, `fs.read_range`)
+- M3: file service completed (`fs.list`, `fs.stat`, `fs.read`, `fs.read_range`, `fs.write`, `fs.mkdir`)
 - M4: search service completed (`search.text`, `search.regex`)
 - M5: patch service completed (`patch.preview`, `patch.apply`, `patch.rollback`, `history.list`)
 - M6: runtime / audit logging baseline completed
@@ -31,6 +31,8 @@ P6 validation assets are now in place. Linux/POSIX validation has been rerun in 
 - `fs.stat`
 - `fs.read`
 - `fs.read_range`
+- `fs.write`
+- `fs.mkdir`
 - `search.text`
 - `search.regex`
 - `request.cancel`
@@ -67,6 +69,15 @@ P6 validation assets are now in place. Linux/POSIX validation has been rerun in 
 - EOL detection
 - line count
 - size / mtime
+
+### Text editing baseline
+
+- direct text writes: `fs.write`
+- directory creation: `fs.mkdir`
+- `fs.write` creates parent directories by default
+- patch preview/apply can now target a file that does not yet exist
+- rollback for a newly created file restores the original absent state
+- patch preview diff output is now narrowed to a contextual hunk instead of a full-file replacement dump
 
 ### Stream / timeout / cancel
 
@@ -224,11 +235,13 @@ Terminal 2:
 ./build/apps/bridge_cli/bridge_cli ping --workspace "$PWD"
 ./build/apps/bridge_cli/bridge_cli info --workspace "$PWD"
 ./build/apps/bridge_cli/bridge_cli open --workspace "$PWD"
-./build/apps/bridge_cli/bridge_cli resolve --workspace "$PWD" --path docs/04-V1-协议草案.md
+./build/apps/bridge_cli/bridge_cli resolve --workspace "$PWD" --path docs/04-v1-protocol.md
 ./build/apps/bridge_cli/bridge_cli list --workspace "$PWD"
 ./build/apps/bridge_cli/bridge_cli stat --workspace "$PWD" --path README.md
 ./build/apps/bridge_cli/bridge_cli read --workspace "$PWD" --path README.md
 ./build/apps/bridge_cli/bridge_cli read-range --workspace "$PWD" --path README.md --start 1 --end 10
+./build/apps/bridge_cli/bridge_cli mkdir --workspace "$PWD" --path demo/output
+./build/apps/bridge_cli/bridge_cli write --workspace "$PWD" --path demo/output/note.txt --content-file /tmp/new.txt
 ./build/apps/bridge_cli/bridge_cli search-text --workspace "$PWD" --query bridge --exts .md,.cpp
 ./build/apps/bridge_cli/bridge_cli search-regex --workspace "$PWD" --pattern main --exts .cpp
 ./build/apps/bridge_cli/bridge_cli patch-preview --workspace "$PWD" --path README.md --new-content-file /tmp/new.txt --json
@@ -290,7 +303,7 @@ P5 is now in place:
     scripts/
 ```
 
-Installed package docs use ASCII filenames in the archive/install tree for portability, while the repository keeps the original source filenames.
+Repository docs now also use ASCII filenames to avoid cross-platform and Git merge issues.
 
 ### Package commands
 
@@ -313,7 +326,7 @@ pwsh ./scripts/package_release.ps1 -BuildDir build -Config Release -OutDir dist 
   - 摘要输出：`.p6_validation_summary/windows_validation_summary.json`
   - 可读报告：`.p6_validation_summary/windows_validation_summary.md`
 
-See `docs/09-V1-验证报告.md` for the current validation status and `docs/10-V1-最终发布检查清单.md` for final sign-off.
+See `docs/09-v1-validation-report.md` for the current validation status and `docs/10-v1-release-checklist.md` for final sign-off.
 
 ### GitHub Actions
 
@@ -331,7 +344,7 @@ The repository now includes two workflow entry points:
 
 If you only need CI checks, use `ci.yml`. If you want signed-off release artifacts attached to a GitHub Release, use `release.yml`.
 
-See `docs/08-V1-发布与部署指南.md` for the detailed workflow behavior and release expectations.
+See `docs/08-v1-release-and-deployment.md` for the detailed workflow behavior and release expectations.
 
 ### Version commands
 
@@ -340,7 +353,7 @@ See `docs/08-V1-发布与部署指南.md` for the detailed workflow behavior and
 ./build/apps/bridge_daemon/bridge_daemon --version
 ```
 
-For more release details, see `docs/08-V1-发布与部署指南.md`.
+For more release details, see `docs/08-v1-release-and-deployment.md`.
 
 ## Logs and state
 
@@ -394,4 +407,4 @@ Mainline request handling returns normalized error codes such as:
 - Non-stream commands remain backward compatible and return a single response.
 - Current V1 does not implement remote access, semantic retrieval, or multi-file merge strategies.
 
-For a more detailed build / run / test walkthrough, see `docs/07-V1-构建运行与测试指南.md`.
+For a more detailed build / run / test walkthrough, see `docs/07-v1-build-run-test-guide.md`.

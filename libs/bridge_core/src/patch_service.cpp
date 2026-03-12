@@ -42,6 +42,7 @@ bool check_stream_timeout(const std::chrono::steady_clock::time_point& started, 
 
 struct FileState {
   bool ok = false;
+  bool exists = false;
   bool binary = false;
   bool bom = false;
   std::string encoding = "utf-8";
@@ -67,6 +68,10 @@ struct PreviewRecord {
 struct PreviewStatusRecord {
   std::string state;
   std::uint64_t recorded_at_ms = 0;
+};
+
+struct BackupRecord {
+  bool existed = true;
 };
 
 std::string iso_time(std::chrono::system_clock::time_point time) {
@@ -126,10 +131,16 @@ bool has_nul_after_bom(const std::string& raw, std::size_t offset) {
   return raw.find('\0', offset) != std::string::npos;
 }
 
-FileState read_text_file(const fs::path& path) {
+FileState read_text_file(const fs::path& path, bool allow_missing = false) {
   FileState out;
   if (!fs::exists(path)) {
-    out.error = "path not found";
+    if (allow_missing) {
+      out.ok = true;
+      out.exists = false;
+      out.hash = content_hash("");
+    } else {
+      out.error = "path not found";
+    }
     return out;
   }
   if (!fs::is_regular_file(path)) {
@@ -159,6 +170,7 @@ FileState read_text_file(const fs::path& path) {
     out.error = "binary file";
     return out;
   }
+  out.exists = true;
   out.eol = raw.find("\r\n", offset) != std::string::npos ? "crlf" : "lf";
   out.text = raw.substr(offset);
   out.hash = content_hash(out.text);
@@ -263,6 +275,7 @@ void cleanup_old_backups(const WorkspaceConfig& workspace) {
   for (const auto& entry : fs::directory_iterator(backups_dir(workspace), ec)) {
     if (ec) break;
     if (!entry.is_regular_file()) continue;
+    if (entry.path().extension() != ".bak") continue;
     items.push_back({entry.path(), entry.last_write_time(ec)});
     ec.clear();
   }
@@ -270,6 +283,10 @@ void cleanup_old_backups(const WorkspaceConfig& workspace) {
   std::sort(items.begin(), items.end(), [](const auto& a, const auto& b) { return a.second > b.second; });
   for (std::size_t i = keep; i < items.size(); ++i) {
     fs::remove(items[i].first, ec);
+    ec.clear();
+    auto meta = items[i].first;
+    meta.replace_extension(".meta");
+    fs::remove(meta, ec);
     ec.clear();
   }
 }
@@ -318,6 +335,10 @@ fs::path backup_file_path(const WorkspaceConfig& workspace, const std::string& b
 
 fs::path preview_meta_path(const WorkspaceConfig& workspace, const std::string& preview_id) {
   return previews_dir(workspace) / (preview_id + ".meta");
+}
+
+fs::path backup_meta_path(const WorkspaceConfig& workspace, const std::string& backup_id, const std::string& rel_path) {
+  return backups_dir(workspace) / (backup_id + "-" + sanitize_rel_path(rel_path) + ".meta");
 }
 
 fs::path preview_content_path(const WorkspaceConfig& workspace, const std::string& preview_id) {
@@ -417,6 +438,34 @@ bool save_preview_record(const WorkspaceConfig& workspace, const PreviewRecord& 
     return false;
   }
   content << new_content;
+  return true;
+}
+
+bool save_backup_record(const WorkspaceConfig& workspace,
+                        const std::string& backup_id,
+                        const std::string& rel_path,
+                        const BackupRecord& record,
+                        std::string* error = nullptr) {
+  std::ofstream meta(backup_meta_path(workspace, backup_id, rel_path), std::ios::binary | std::ios::trunc);
+  if (!meta) {
+    if (error) *error = "failed to write backup metadata";
+    return false;
+  }
+  meta << (record.existed ? "1" : "0") << '\n';
+  return true;
+}
+
+bool load_backup_record(const WorkspaceConfig& workspace,
+                        const std::string& backup_id,
+                        const std::string& rel_path,
+                        BackupRecord* out) {
+  std::ifstream meta(backup_meta_path(workspace, backup_id, rel_path), std::ios::binary);
+  if (!meta) return false;
+  std::string line;
+  std::getline(meta, line);
+  BackupRecord record;
+  record.existed = line != "0";
+  if (out) *out = record;
   return true;
 }
 
@@ -536,7 +585,7 @@ std::vector<std::string> split_lines(const std::string& text) {
   return lines;
 }
 
-std::string make_simple_diff(const std::string& rel_path, const std::string& old_text, const std::string& new_text) {
+std::string make_context_diff(const std::string& rel_path, const std::string& old_text, const std::string& new_text) {
   std::ostringstream oss;
   oss << "--- a/" << rel_path << "\n";
   oss << "+++ b/" << rel_path << "\n";
@@ -544,9 +593,35 @@ std::string make_simple_diff(const std::string& rel_path, const std::string& old
     oss << "@@ no changes @@\n";
     return oss.str();
   }
-  oss << "@@\n";
-  for (const auto& line : split_lines(old_text)) oss << "-" << line << "\n";
-  for (const auto& line : split_lines(new_text)) oss << "+" << line << "\n";
+
+  const auto old_lines = split_lines(old_text);
+  const auto new_lines = split_lines(new_text);
+  std::size_t prefix = 0;
+  while (prefix < old_lines.size() && prefix < new_lines.size() && old_lines[prefix] == new_lines[prefix]) ++prefix;
+
+  std::size_t old_suffix = old_lines.size();
+  std::size_t new_suffix = new_lines.size();
+  while (old_suffix > prefix && new_suffix > prefix && old_lines[old_suffix - 1] == new_lines[new_suffix - 1]) {
+    --old_suffix;
+    --new_suffix;
+  }
+
+  const std::size_t context = 3;
+  const std::size_t old_hunk_start = prefix > context ? prefix - context : 0;
+  const std::size_t new_hunk_start = old_hunk_start;
+  const std::size_t old_hunk_end = std::min(old_lines.size(), old_suffix + context);
+  const std::size_t new_hunk_end = std::min(new_lines.size(), new_suffix + context);
+  const std::size_t old_count = old_hunk_end - old_hunk_start;
+  const std::size_t new_count = new_hunk_end - new_hunk_start;
+
+  oss << "@@ -" << (old_hunk_start + 1) << "," << old_count
+      << " +" << (new_hunk_start + 1) << "," << new_count << " @@\n";
+
+  const std::size_t prefix_context_end = std::min(prefix, old_hunk_end);
+  for (std::size_t i = old_hunk_start; i < prefix_context_end; ++i) oss << " " << old_lines[i] << "\n";
+  for (std::size_t i = prefix; i < old_suffix; ++i) oss << "-" << old_lines[i] << "\n";
+  for (std::size_t i = prefix; i < new_suffix; ++i) oss << "+" << new_lines[i] << "\n";
+  for (std::size_t i = old_suffix; i < old_hunk_end; ++i) oss << " " << old_lines[i] << "\n";
   return oss.str();
 }
 
@@ -625,7 +700,7 @@ PatchPreviewResult patch_preview(const WorkspaceConfig& workspace,
     out.error = "path denied by policy";
     return out;
   }
-  const auto state = read_text_file(resolved.absolute_path);
+  const auto state = read_text_file(resolved.absolute_path, true);
   if (!state.ok) {
     out.error = state.error;
     return out;
@@ -645,7 +720,7 @@ PatchPreviewResult patch_preview(const WorkspaceConfig& workspace,
   out.current_hash = state.hash;
   out.new_content_hash = content_hash(new_content);
   out.preview_id = make_preview_id(out.path, out.current_hash, out.new_content_hash);
-  out.diff = make_simple_diff(out.path, state.text, new_content);
+  out.diff = make_context_diff(out.path, state.text, new_content);
 
   PreviewRecord rec;
   rec.preview_id = out.preview_id;
@@ -779,7 +854,7 @@ PatchApplyResult patch_apply(const WorkspaceConfig& workspace,
     out.error = "path denied by policy";
     return out;
   }
-  const auto state = read_text_file(resolved.absolute_path);
+  const auto state = read_text_file(resolved.absolute_path, true);
   if (!state.ok) {
     out.error = state.error;
     return out;
@@ -814,14 +889,25 @@ PatchApplyResult patch_apply(const WorkspaceConfig& workspace,
   const auto backup_id = make_backup_id(resolved.normalized_relative_path);
   const auto backup_path = backup_file_path(workspace, backup_id, resolved.normalized_relative_path);
   {
-    std::ofstream backup(backup_path, std::ios::binary);
+    std::ofstream backup(backup_path, std::ios::binary | std::ios::trunc);
     if (!backup) {
       out.error = "failed to create backup";
       return out;
     }
-    backup << encode_text(state.text, state.eol, state.bom, state.encoding);
+    if (state.exists) backup << encode_text(state.text, state.eol, state.bom, state.encoding);
+  }
+  BackupRecord backup_record;
+  backup_record.existed = state.exists;
+  if (!save_backup_record(workspace, backup_id, resolved.normalized_relative_path, backup_record, &out.error)) {
+    return out;
   }
   const fs::path target(resolved.absolute_path);
+  std::error_code ec;
+  fs::create_directories(target.parent_path(), ec);
+  if (ec) {
+    out.error = ec.message();
+    return out;
+  }
   const fs::path temp = target.string() + ".bridge.tmp";
   {
     std::ofstream ofs(temp, std::ios::binary | std::ios::trunc);
@@ -831,10 +917,17 @@ PatchApplyResult patch_apply(const WorkspaceConfig& workspace,
     }
     ofs << encode_text(effective_new_content, state.eol, state.bom, state.encoding);
   }
-  std::error_code ec;
+  if (state.exists) {
+    fs::remove(target, ec);
+    if (ec) {
+      fs::remove(temp, ec);
+      out.error = ec.message();
+      return out;
+    }
+  }
   fs::rename(temp, target, ec);
   if (ec) {
-    fs::remove(temp);
+    fs::remove(temp, ec);
     out.error = ec.message();
     return out;
   }
@@ -879,6 +972,8 @@ PatchRollbackResult patch_rollback(const WorkspaceConfig& workspace,
     out.error = "backup not found";
     return out;
   }
+  BackupRecord backup_record;
+  load_backup_record(workspace, backup_id, resolved.normalized_relative_path, &backup_record);
   std::ifstream ifs(backup_path, std::ios::binary);
   if (!ifs) {
     out.error = "failed to open backup";
@@ -886,25 +981,46 @@ PatchRollbackResult patch_rollback(const WorkspaceConfig& workspace,
   }
   const std::string backup_bytes((std::istreambuf_iterator<char>(ifs)), std::istreambuf_iterator<char>());
   const fs::path target(resolved.absolute_path);
-  const fs::path temp = target.string() + ".bridge.rollback.tmp";
-  {
-    std::ofstream ofs(temp, std::ios::binary | std::ios::trunc);
-    if (!ofs) {
-      out.error = "failed to open temp file";
+  std::error_code ec;
+  if (!backup_record.existed) {
+    fs::remove(target, ec);
+    if (ec) {
+      out.error = ec.message();
       return out;
     }
-    ofs << backup_bytes;
-  }
-  std::error_code ec;
-  fs::rename(temp, target, ec);
-  if (ec) {
-    fs::remove(temp);
-    out.error = ec.message();
-    return out;
+  } else {
+    fs::create_directories(target.parent_path(), ec);
+    if (ec) {
+      out.error = ec.message();
+      return out;
+    }
+    const fs::path temp = target.string() + ".bridge.rollback.tmp";
+    {
+      std::ofstream ofs(temp, std::ios::binary | std::ios::trunc);
+      if (!ofs) {
+        out.error = "failed to open temp file";
+        return out;
+      }
+      ofs << backup_bytes;
+    }
+    if (fs::exists(target, ec)) {
+      fs::remove(target, ec);
+      if (ec) {
+        fs::remove(temp, ec);
+        out.error = ec.message();
+        return out;
+      }
+    }
+    fs::rename(temp, target, ec);
+    if (ec) {
+      fs::remove(temp, ec);
+      out.error = ec.message();
+      return out;
+    }
   }
   append_history(workspace, "patch.rollback", resolved.normalized_relative_path, backup_id, client_id, session_id, request_id);
   cleanup_old_backups(workspace);
-  const auto restored_state = read_text_file(target);
+  const auto restored_state = read_text_file(target, true);
   out.ok = restored_state.ok;
   out.path = resolved.normalized_relative_path;
   out.rolled_back = restored_state.ok;

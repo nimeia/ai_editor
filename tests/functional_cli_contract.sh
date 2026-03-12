@@ -37,7 +37,7 @@ start_bridge_daemon functional_cli_contract
 NOARGS_PAYLOAD="$(invoke_bridge_cli_allow_fail)"
 split_allow_fail "$NOARGS_PAYLOAD" NOARGS_CODE NOARGS_TEXT
 [[ "$NOARGS_CODE" == "1" ]] || bridge_fail "expected bridge_cli with no args to exit 1"
-assert_contains "$NOARGS_TEXT" 'usage: bridge_cli <ping|info|open|resolve|list|stat|read|read-range|search-text|search-regex|cancel|patch-preview|patch-apply|patch-rollback|history>'
+assert_contains "$NOARGS_TEXT" 'usage: bridge_cli <ping|info|open|resolve|list|stat|read|read-range|write|mkdir|search-text|search-regex|cancel|patch-preview|patch-apply|patch-rollback|history>'
 
 UNSUPPORTED_PAYLOAD="$(invoke_bridge_cli_allow_fail not-a-command)"
 split_allow_fail "$UNSUPPORTED_PAYLOAD" UNSUPPORTED_CODE UNSUPPORTED_TEXT
@@ -65,9 +65,13 @@ assert_contains "$SEARCH_TEXT_OUT" 'docs/sample.txt:2'
 assert_contains "$SEARCH_TEXT_OUT" 'beta token'
 
 STAT_TEXT="$(invoke_bridge_cli stat --workspace "$WS" --path docs/sample.txt)"
+MKDIR_TEXT="$(invoke_bridge_cli mkdir --workspace "$WS" --path docs/generated/nested)"
+WRITE_TEXT="$(invoke_bridge_cli write --workspace "$WS" --path docs/generated/nested/new.txt --content-file "$RUN_DIR/sample_new.txt")"
 assert_contains "$STAT_TEXT" 'path: docs/sample.txt'
 assert_contains "$STAT_TEXT" 'kind: file'
 assert_contains "$STAT_TEXT" 'encoding: utf-8'
+assert_contains "$MKDIR_TEXT" 'path: docs/generated/nested'
+assert_contains "$WRITE_TEXT" 'path: docs/generated/nested/new.txt'
 
 RESOLVE_TEXT="$(invoke_bridge_cli resolve --workspace "$WS" --path docs/sample.txt)"
 assert_contains "$RESOLVE_TEXT" 'workspace_root: '

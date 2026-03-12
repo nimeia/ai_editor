@@ -24,6 +24,8 @@ READ_OUT=$("$CLI" read --workspace "$WS" --path docs/readme.md --json)
 RANGE_OUT=$("$CLI" read-range --workspace "$WS" --path docs/readme.md --start 2 --end 3 --json)
 READ_EXCLUDED_OUT=$("$CLI" read --workspace "$WS" --path node_modules/pkg/index.js --json)
 RECURSIVE_OUT=$("$CLI" list --workspace "$WS" --json --recursive)
+MKDIR_OUT=$("$CLI" mkdir --workspace "$WS" --path docs/generated/nested --json)
+WRITE_OUT=$("$CLI" write --workspace "$WS" --path docs/generated/nested/out.txt --content-file "$WS/docs/readme.md" --json)
 
 [[ "$LIST_OUT" == *'"path":"docs"'* ]]
 [[ "$LIST_OUT" == *'"path":"node_modules"'* ]]
@@ -32,6 +34,9 @@ RECURSIVE_OUT=$("$CLI" list --workspace "$WS" --json --recursive)
 [[ "$RANGE_OUT" == *'beta\ngamma'* ]]
 [[ "$READ_EXCLUDED_OUT" == *'"policy":"skip_by_default"'* ]]
 [[ "$RECURSIVE_OUT" != *'node_modules/pkg/index.js'* ]]
+[[ "$MKDIR_OUT" == *'"created":true'* ]]
+[[ "$WRITE_OUT" == *'"path":"docs/generated/nested/out.txt"'* ]]
+[[ -f "$WS/docs/generated/nested/out.txt" ]]
 
 MISSING_OUT=$("$CLI" stat --workspace "$WS" --path docs/missing.md --json || true)
 OUTSIDE_OUT=$("$CLI" read --workspace "$WS" --path ../outside.txt --json || true)

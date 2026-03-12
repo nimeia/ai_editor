@@ -1,6 +1,5 @@
-# 目录结构与接口清单
-
-## 目录
+# 鐩綍缁撴瀯涓庢帴鍙ｆ竻鍗?
+## 鐩綍
 
 ```text
 apps/
@@ -16,24 +15,24 @@ tests/
   integration_windows_native.ps1
   tests_*.cpp
 docs/
-  01-V1-需求与边界.md
-  02-V1-跨平台架构概要.md
-  03-V1-风险与注意事项.md
-  04-V1-协议草案.md
-  05-V1-开发计划.md
-  06-V1-目录结构与接口清单.md
-  07-V1-构建运行与测试指南.md
+  01-v1-scope-and-boundaries.md
+  02-v1-architecture-overview.md
+  03-v1-risks-and-notes.md
+  04-v1-protocol.md
+  05-v1-plan.md
+  06-v1-layout-and-interfaces.md
+  07-v1-build-run-test-guide.md
 scripts/
   windows_smoke.ps1
 ```
 
-## 关键接口 / 组件
+## 鍏抽敭鎺ュ彛 / 缁勪欢
 
 ### Platform
 
 - `bridge::platform::RuntimePaths`
 - `bridge::platform::InstanceLock`
-- `bridge::platform::GetPlatformName`（平台诊断）
+- `bridge::platform::GetPlatformName`锛堝钩鍙拌瘖鏂級
 
 ### Transport
 
@@ -52,7 +51,7 @@ scripts/
 - `bridge::core::LoggingService`
 - `bridge::core::Protocol` / request-response serialization helpers
 
-## CLI 对外命令
+## CLI 瀵瑰鍛戒护
 
 - `ping`
 - `info`
@@ -70,9 +69,9 @@ scripts/
 - `patch-rollback`
 - `history`
 
-## 测试资产
+## 娴嬭瘯璧勪骇
 
-### 单元测试
+### 鍗曞厓娴嬭瘯
 
 - `tests_instance.cpp`
 - `tests_path_policy.cpp`
@@ -83,7 +82,7 @@ scripts/
 - `tests_logging.cpp`
 - `tests_platform_transport.cpp`
 
-### 集成测试
+### 闆嗘垚娴嬭瘯
 
 - `integration_ping_info.sh`
 - `integration_file_ops.sh`
@@ -96,6 +95,6 @@ scripts/
 - `integration_patch_stream_ops.sh`
 - `integration_timeout_ops.sh`
 - `functional_windows_native.ps1`
-  - Windows 原生功能测试脚本，覆盖 workspace / fs / search / patch / log 关键路径
+  - Windows 鍘熺敓鍔熻兘娴嬭瘯鑴氭湰锛岃鐩?workspace / fs / search / patch / log 鍏抽敭璺緞
 - `integration_windows_native.ps1`
-  - 兼容包装脚本，转调 `functional_windows_native.ps1`
+  - 鍏煎鍖呰鑴氭湰锛岃浆璋?`functional_windows_native.ps1`

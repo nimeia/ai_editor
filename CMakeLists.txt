@@ -20,17 +20,19 @@ add_subdirectory(apps/bridge_cli)
 add_subdirectory(tests)
 
 install(FILES README.md DESTINATION ${CMAKE_INSTALL_DATADIR}/ai_bridge)
-install(FILES docs/00-文档索引.md DESTINATION ${CMAKE_INSTALL_DATADIR}/ai_bridge/docs RENAME 00-doc-index.md)
-install(FILES docs/01-V1-需求与边界.md DESTINATION ${CMAKE_INSTALL_DATADIR}/ai_bridge/docs RENAME 01-v1-scope-and-boundaries.md)
-install(FILES docs/02-V1-跨平台架构概要.md DESTINATION ${CMAKE_INSTALL_DATADIR}/ai_bridge/docs RENAME 02-v1-architecture-overview.md)
-install(FILES docs/03-V1-风险与注意事项.md DESTINATION ${CMAKE_INSTALL_DATADIR}/ai_bridge/docs RENAME 03-v1-risks-and-notes.md)
-install(FILES docs/04-V1-协议草案.md DESTINATION ${CMAKE_INSTALL_DATADIR}/ai_bridge/docs RENAME 04-v1-protocol.md)
-install(FILES docs/05-V1-开发计划.md DESTINATION ${CMAKE_INSTALL_DATADIR}/ai_bridge/docs RENAME 05-v1-plan.md)
-install(FILES docs/06-V1-目录结构与接口清单.md DESTINATION ${CMAKE_INSTALL_DATADIR}/ai_bridge/docs RENAME 06-v1-layout-and-interfaces.md)
-install(FILES docs/07-V1-构建运行与测试指南.md DESTINATION ${CMAKE_INSTALL_DATADIR}/ai_bridge/docs RENAME 07-v1-build-run-test-guide.md)
-install(FILES docs/08-V1-发布与部署指南.md DESTINATION ${CMAKE_INSTALL_DATADIR}/ai_bridge/docs RENAME 08-v1-release-and-deployment.md)
-install(FILES docs/09-V1-验证报告.md DESTINATION ${CMAKE_INSTALL_DATADIR}/ai_bridge/docs RENAME 09-v1-validation-report.md)
-install(FILES docs/10-V1-最终发布检查清单.md DESTINATION ${CMAKE_INSTALL_DATADIR}/ai_bridge/docs RENAME 10-v1-release-checklist.md)
+install(FILES
+  docs/00-doc-index.md
+  docs/01-v1-scope-and-boundaries.md
+  docs/02-v1-architecture-overview.md
+  docs/03-v1-risks-and-notes.md
+  docs/04-v1-protocol.md
+  docs/05-v1-plan.md
+  docs/06-v1-layout-and-interfaces.md
+  docs/07-v1-build-run-test-guide.md
+  docs/08-v1-release-and-deployment.md
+  docs/09-v1-validation-report.md
+  docs/10-v1-release-checklist.md
+  DESTINATION ${CMAKE_INSTALL_DATADIR}/ai_bridge/docs)
 install(PROGRAMS scripts/windows_smoke.ps1 scripts/package_release.sh scripts/package_release.ps1 scripts/validate_v1.sh scripts/validate_v1.ps1 DESTINATION ${CMAKE_INSTALL_DATADIR}/ai_bridge/scripts)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")

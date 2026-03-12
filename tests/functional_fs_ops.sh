@@ -30,6 +30,8 @@ UTF16_READ_FAIL="$(invoke_bridge_cli_allow_fail read --workspace "$WS" --path do
 BINARY_READ_FAIL="$(invoke_bridge_cli_allow_fail read --workspace "$WS" --path docs/blob.bin --json)"
 OUTSIDE_FAIL="$(invoke_bridge_cli_allow_fail read --workspace "$WS" --path ../outside.txt --json)"
 MISSING_FAIL="$(invoke_bridge_cli_allow_fail stat --workspace "$WS" --path docs/missing.txt --json)"
+MKDIR_JSON="$(invoke_bridge_cli mkdir --workspace "$WS" --path docs/generated/nested --json)"
+WRITE_JSON="$(invoke_bridge_cli write --workspace "$WS" --path docs/generated/nested/out.txt --content-file "$WS/docs/range.txt" --json)"
 assert_contains "$LIST_JSON" '"ok":true'
 assert_contains "$LIST_JSON" '"path":"docs"'
 assert_not_contains "$LIST_JSON" 'node_modules/pkg/index.js'
@@ -48,6 +50,9 @@ assert_contains "$UTF16_READ_FAIL" 'BINARY_FILE'
 assert_contains "$BINARY_READ_FAIL" 'BINARY_FILE'
 assert_contains "$OUTSIDE_FAIL" 'PATH_OUTSIDE_WORKSPACE'
 assert_contains "$MISSING_FAIL" 'FILE_NOT_FOUND'
+assert_contains "$MKDIR_JSON" '"created":true'
+assert_contains "$WRITE_JSON" '"path":"docs/generated/nested/out.txt"'
+assert_contains "$(cat "$WS/docs/generated/nested/out.txt")" $'one\ntwo\nthree'
 stop_bridge_daemon
 trap - EXIT
 bridge_log 'functional_fs_ops passed'

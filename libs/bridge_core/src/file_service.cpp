@@ -134,6 +134,51 @@ FsStatResult make_error_stat(PathPolicyKind policy, const std::string& error) {
   return out;
 }
 
+FsWriteResult make_error_write(PathPolicyKind policy, const std::string& error) {
+  FsWriteResult out;
+  out.policy = policy;
+  out.error = error;
+  return out;
+}
+
+FsMkdirResult make_error_mkdir(PathPolicyKind policy, const std::string& error) {
+  FsMkdirResult out;
+  out.policy = policy;
+  out.error = error;
+  return out;
+}
+
+bool supports_text_encoding(const std::string& encoding) {
+  return encoding == "utf-8";
+}
+
+bool supports_eol(const std::string& eol) {
+  return eol == "lf" || eol == "crlf";
+}
+
+std::string encode_text_for_write(const std::string& text, const std::string& eol, bool bom, const std::string& encoding) {
+  std::string normalized;
+  normalized.reserve(text.size());
+  for (std::size_t i = 0; i < text.size(); ++i) {
+    if (text[i] == '\r') continue;
+    normalized.push_back(text[i]);
+  }
+  std::string converted;
+  if (eol == "crlf") {
+    converted.reserve(normalized.size() * 2);
+    for (char c : normalized) {
+      if (c == '\n') converted += "\r\n";
+      else converted.push_back(c);
+    }
+  } else {
+    converted = std::move(normalized);
+  }
+  std::string out;
+  if (bom && encoding == "utf-8") out = "\xEF\xBB\xBF";
+  out += converted;
+  return out;
+}
+
 struct ResolvedFileContext {
   bool ok = false;
   ResolveResult resolved;
@@ -457,6 +502,107 @@ FsReadStreamResult fs_read_range_stream(const WorkspaceConfig& workspace,
     }
     ++out.chunk_count;
   }
+  return out;
+}
+
+
+FsWriteResult fs_write(const WorkspaceConfig& workspace,
+                       const std::string& requested_path,
+                       const std::string& content,
+                       const FsWriteOptions& options) {
+  const auto resolved = resolve_under_workspace(workspace, requested_path);
+  if (!resolved.ok) return make_error_write(PathPolicyKind::Normal, resolved.error);
+  if (policy_denies(resolved.policy)) return make_error_write(resolved.policy, "path denied by policy");
+  if (!supports_text_encoding(options.encoding)) return make_error_write(resolved.policy, "unsupported encoding");
+  if (!supports_eol(options.eol)) return make_error_write(resolved.policy, "unsupported eol");
+  if (content.find('\0') != std::string::npos) return make_error_write(resolved.policy, "binary content not supported");
+
+  const fs::path path(resolved.absolute_path);
+  std::error_code ec;
+  const bool existed = fs::exists(path, ec);
+  if (ec) return make_error_write(resolved.policy, ec.message());
+  if (existed && !fs::is_regular_file(path, ec)) return make_error_write(resolved.policy, "path is not a regular file");
+  if (ec) return make_error_write(resolved.policy, ec.message());
+  if (existed && !options.overwrite) return make_error_write(resolved.policy, "path already exists");
+
+  const fs::path parent = path.parent_path();
+  bool parent_created = false;
+  if (!parent.empty()) {
+    if (!fs::exists(parent, ec)) {
+      if (!options.create_parents) return make_error_write(resolved.policy, "parent directory not found");
+      parent_created = fs::create_directories(parent, ec);
+      if (ec) return make_error_write(resolved.policy, ec.message());
+    } else if (!fs::is_directory(parent, ec)) {
+      return make_error_write(resolved.policy, "parent path is not a directory");
+    }
+    if (ec) return make_error_write(resolved.policy, ec.message());
+  }
+
+  const std::string encoded = encode_text_for_write(content, options.eol, options.bom, options.encoding);
+  const fs::path temp = path.string() + ".bridge.write.tmp";
+  {
+    std::ofstream ofs(temp, std::ios::binary | std::ios::trunc);
+    if (!ofs) return make_error_write(resolved.policy, "failed to open temp file");
+    ofs << encoded;
+  }
+  if (existed) {
+    fs::remove(path, ec);
+    if (ec) {
+      fs::remove(temp, ec);
+      return make_error_write(resolved.policy, "failed to replace existing file");
+    }
+  }
+  fs::rename(temp, path, ec);
+  if (ec) {
+    fs::remove(temp, ec);
+    return make_error_write(resolved.policy, ec.message());
+  }
+
+  FsWriteResult out;
+  out.ok = true;
+  out.path = resolved.normalized_relative_path;
+  out.bytes_written = encoded.size();
+  out.created = !existed;
+  out.parent_created = parent_created;
+  out.encoding = options.encoding;
+  out.bom = options.bom;
+  out.eol = options.eol;
+  out.policy = resolved.policy;
+  return out;
+}
+
+FsMkdirResult fs_mkdir(const WorkspaceConfig& workspace,
+                       const std::string& requested_path,
+                       const FsMkdirOptions& options) {
+  const auto resolved = resolve_under_workspace(workspace, requested_path);
+  if (!resolved.ok) return make_error_mkdir(PathPolicyKind::Normal, resolved.error);
+  if (policy_denies(resolved.policy)) return make_error_mkdir(resolved.policy, "path denied by policy");
+
+  const fs::path path(resolved.absolute_path);
+  std::error_code ec;
+  if (fs::exists(path, ec)) {
+    if (ec) return make_error_mkdir(resolved.policy, ec.message());
+    if (fs::is_directory(path, ec)) {
+      FsMkdirResult out;
+      out.ok = true;
+      out.path = resolved.normalized_relative_path;
+      out.created = false;
+      out.policy = resolved.policy;
+      return out;
+    }
+    return make_error_mkdir(resolved.policy, "path exists and is not a directory");
+  }
+
+  bool created = false;
+  if (options.create_parents) created = fs::create_directories(path, ec);
+  else created = fs::create_directory(path, ec);
+  if (ec) return make_error_mkdir(resolved.policy, ec.message());
+
+  FsMkdirResult out;
+  out.ok = true;
+  out.path = resolved.normalized_relative_path;
+  out.created = created;
+  out.policy = resolved.policy;
   return out;
 }
 

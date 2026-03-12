@@ -58,6 +58,40 @@ struct FsReadResult {
   std::string error;
 };
 
+
+struct FsWriteOptions {
+  std::string encoding = "utf-8";
+  bool bom = false;
+  std::string eol = "lf";
+  bool create_parents = true;
+  bool overwrite = true;
+};
+
+struct FsWriteResult {
+  bool ok = false;
+  std::string path;
+  std::size_t bytes_written = 0;
+  bool created = false;
+  bool parent_created = false;
+  std::string encoding = "utf-8";
+  bool bom = false;
+  std::string eol = "lf";
+  PathPolicyKind policy = PathPolicyKind::Normal;
+  std::string error;
+};
+
+struct FsMkdirOptions {
+  bool create_parents = true;
+};
+
+struct FsMkdirResult {
+  bool ok = false;
+  std::string path;
+  bool created = false;
+  PathPolicyKind policy = PathPolicyKind::Normal;
+  std::string error;
+};
+
 struct FsReadStreamOptions {
   std::size_t max_bytes = 1024 * 1024;
   std::size_t chunk_bytes = 16 * 1024;
@@ -99,5 +133,12 @@ FsReadStreamResult fs_read_range_stream(const WorkspaceConfig& workspace,
                                         std::size_t start_line,
                                         std::size_t end_line,
                                         const FsReadStreamOptions& options = {});
+FsWriteResult fs_write(const WorkspaceConfig& workspace,
+                       const std::string& requested_path,
+                       const std::string& content,
+                       const FsWriteOptions& options = {});
+FsMkdirResult fs_mkdir(const WorkspaceConfig& workspace,
+                       const std::string& requested_path,
+                       const FsMkdirOptions& options = {});
 
 } // namespace bridge::core

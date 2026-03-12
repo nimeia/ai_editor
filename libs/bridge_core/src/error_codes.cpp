@@ -27,6 +27,13 @@ ErrorInfo classify_common_error(const std::string& message, const std::string& f
   if (message == "invalid line range") return {"INVALID_PARAMS", message};
   if (message == "path is not a directory") return {"INVALID_PARAMS", message};
   if (message == "path is not a regular file") return {"INVALID_PARAMS", message};
+  if (message == "path exists and is not a directory") return {"INVALID_PARAMS", message};
+  if (message == "parent path is not a directory") return {"INVALID_PARAMS", message};
+  if (message == "path already exists") return {"ALREADY_EXISTS", message};
+  if (message == "parent directory not found") return {"FILE_NOT_FOUND", message};
+  if (message == "unsupported encoding") return {"INVALID_PARAMS", message};
+  if (message == "unsupported eol") return {"INVALID_PARAMS", message};
+  if (message == "binary content not supported") return {"INVALID_PARAMS", message};
   if (contains(message, "failed to open file")) return {"ACCESS_DENIED", message};
   if (contains(message, "Permission denied")) return {"ACCESS_DENIED", message};
   return {fallback_code, message};

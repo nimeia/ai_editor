@@ -148,6 +148,31 @@ std::string format_fs_read(const FsReadResult& res) {
   return oss.str();
 }
 
+std::string format_fs_write(const FsWriteResult& res) {
+  std::ostringstream oss;
+  oss << "{";
+  oss << "\"path\":\"" << json_escape(res.path) << "\",";
+  oss << "\"bytes_written\":" << res.bytes_written << ",";
+  oss << "\"created\":" << (res.created ? "true" : "false") << ",";
+  oss << "\"parent_created\":" << (res.parent_created ? "true" : "false") << ",";
+  oss << "\"encoding\":\"" << json_escape(res.encoding) << "\",";
+  oss << "\"bom\":" << (res.bom ? "true" : "false") << ",";
+  oss << "\"eol\":\"" << json_escape(res.eol) << "\",";
+  oss << "\"policy\":\"" << json_escape(to_string(res.policy)) << "\"";
+  oss << "}";
+  return oss.str();
+}
+
+std::string format_fs_mkdir(const FsMkdirResult& res) {
+  std::ostringstream oss;
+  oss << "{";
+  oss << "\"path\":\"" << json_escape(res.path) << "\",";
+  oss << "\"created\":" << (res.created ? "true" : "false") << ",";
+  oss << "\"policy\":\"" << json_escape(to_string(res.policy)) << "\"";
+  oss << "}";
+  return oss.str();
+}
+
 std::string format_search_match(const SearchMatch& m) {
   std::ostringstream oss;
   oss << "{";
@@ -487,6 +512,29 @@ std::string handle_request(const std::string& request_json,
                                       json_get_size_t(request_json, "max_bytes", 64 * 1024));
     if (!result.ok) { const auto err = classify_common_error(result.error, "FS_READ_RANGE_FAILED"); return make_error_response(request_id, err.code, err.message); }
     return make_ok_response(request_id, format_fs_read(result));
+  }
+  if (method == "fs.write") {
+    FsWriteOptions options;
+    options.encoding = json_get_string(request_json, "encoding");
+    if (options.encoding.empty()) options.encoding = "utf-8";
+    options.bom = json_get_bool(request_json, "bom", false);
+    options.eol = json_get_string(request_json, "eol");
+    if (options.eol.empty()) options.eol = "lf";
+    options.create_parents = json_get_bool(request_json, "create_parents", true);
+    options.overwrite = json_get_bool(request_json, "overwrite", true);
+    const auto result = fs_write(workspace,
+                                 json_get_string(request_json, "path"),
+                                 json_get_string(request_json, "content"),
+                                 options);
+    if (!result.ok) { const auto err = classify_common_error(result.error, "FS_WRITE_FAILED"); return make_error_response(request_id, err.code, err.message); }
+    return make_ok_response(request_id, format_fs_write(result));
+  }
+  if (method == "fs.mkdir") {
+    FsMkdirOptions options;
+    options.create_parents = json_get_bool(request_json, "create_parents", true);
+    const auto result = fs_mkdir(workspace, json_get_string(request_json, "path"), options);
+    if (!result.ok) { const auto err = classify_common_error(result.error, "FS_MKDIR_FAILED"); return make_error_response(request_id, err.code, err.message); }
+    return make_ok_response(request_id, format_fs_mkdir(result));
   }
   if (method == "search.text" || method == "search.regex") {
     SearchOptions options;

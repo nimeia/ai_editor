@@ -104,6 +104,34 @@ int main() {
   assert(rollback_again.rolled_back);
   assert(slurp(root / "docs" / "note.txt") == "one\ntwo\nthree\n");
 
+
+  auto create_preview = bridge::core::patch_preview(cfg, "docs/newfile.txt", "alpha\nbeta\n");
+  assert(create_preview.ok);
+  assert(create_preview.current_mtime.empty());
+  assert(!create_preview.current_hash.empty());
+
+  auto create_apply = bridge::core::patch_apply(cfg,
+                                                "docs/newfile.txt",
+                                                "",
+                                                {},
+                                                "cli-001",
+                                                "sess-001",
+                                                "req-create-apply",
+                                                create_preview.preview_id);
+  assert(create_apply.ok);
+  assert(create_apply.applied);
+  assert(slurp(root / "docs" / "newfile.txt") == "alpha\nbeta\n");
+
+  auto create_rollback = bridge::core::patch_rollback(cfg,
+                                                      "docs/newfile.txt",
+                                                      create_apply.backup_id,
+                                                      "cli-001",
+                                                      "sess-001",
+                                                      "req-create-rollback");
+  assert(create_rollback.ok);
+  assert(create_rollback.rolled_back);
+  assert(!fs::exists(root / "docs" / "newfile.txt"));
+
   auto history = bridge::core::history_list(cfg, "docs/note.txt", 10);
   assert(history.ok);
   assert(history.items.size() >= 3);

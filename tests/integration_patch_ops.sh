@@ -62,7 +62,7 @@ for i in 0 1 2 3 4 5; do
 
 [[ -f "$WS/.bridge/history.log" ]]
 [[ -f "$WS/.bridge/history.log.1" ]]
-BACKUP_COUNT=$(find "$WS/.bridge/backups" -type f | wc -l | tr -d ' ')
+BACKUP_COUNT=$(find "$WS/.bridge/backups" -name "*.bak" -type f | wc -l | tr -d ' ')
 [[ "$BACKUP_COUNT" -le 2 ]]
 PREVIEW_COUNT=$(find "$WS/.bridge/previews" -name '*.meta' -type f | wc -l | tr -d ' ')
 [[ "$PREVIEW_COUNT" -le 2 ]]

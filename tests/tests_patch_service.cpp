@@ -197,7 +197,7 @@ int main() {
 
   std::size_t backup_count = 0;
   for (const auto& entry : fs::directory_iterator(root / ".bridge" / "backups")) {
-    if (entry.is_regular_file()) ++backup_count;
+    if (entry.is_regular_file() && entry.path().extension() == ".bak") ++backup_count;
   }
   assert(backup_count <= 2);
 
