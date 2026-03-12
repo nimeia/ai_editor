@@ -31,7 +31,11 @@ int main() {
   assert(regex.matches.size() == 1);
   assert(regex.matches[0].path == "docs/code.cpp");
 
-  auto excluded = bridge::core::search_text(cfg, "token", {.root_path=".", .include_excluded=true, .max_results=10});
+  bridge::core::SearchOptions excluded_opts;
+  excluded_opts.root_path = ".";
+  excluded_opts.include_excluded = true;
+  excluded_opts.max_results = 10;
+  auto excluded = bridge::core::search_text(cfg, "token", excluded_opts);
   assert(excluded.ok);
   bool saw_excluded = false;
   for (const auto& m : excluded.matches) {

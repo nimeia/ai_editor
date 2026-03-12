@@ -24,7 +24,11 @@ int main() {
 
   auto cfg = bridge::core::make_default_workspace_config(root.string());
 
-  auto list_truncated = bridge::core::fs_list(cfg, "docs", {.recursive = false, .include_excluded = false, .max_results = 2});
+  bridge::core::FsListOptions list_opts;
+  list_opts.recursive = false;
+  list_opts.include_excluded = false;
+  list_opts.max_results = 2;
+  auto list_truncated = bridge::core::fs_list(cfg, "docs", list_opts);
   assert(list_truncated.ok);
   assert(list_truncated.entries.size() == 2);
   assert(list_truncated.truncated);

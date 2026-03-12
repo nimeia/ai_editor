@@ -72,7 +72,7 @@ try {
   $searchCancelOut = Join-Path $RunDir 'windows_search_cancel.out'
   $searchCancelErr = Join-Path $RunDir 'windows_search_cancel.err'
   Remove-Item -Force $searchCancelOut, $searchCancelErr -ErrorAction SilentlyContinue
-  $searchProc = Start-Process -FilePath $Cli -ArgumentList @('search-text', '--workspace', $workspace, '--path', 'docs dir/big.txt', '--query', 'definitely-not-present', '--request-id', 'req-win-search-cancel', '--timeout-ms', '30000', '--json') -PassThru -RedirectStandardOutput $searchCancelOut -RedirectStandardError $searchCancelErr
+  $searchProc = Start-BridgeCliAsync -CommandArgs @('search-text', '--workspace', $workspace, '--path', 'docs dir/big.txt', '--query', 'definitely-not-present', '--request-id', 'req-win-search-cancel', '--timeout-ms', '30000', '--json') -StdoutPath $searchCancelOut -StderrPath $searchCancelErr
   Start-Sleep -Milliseconds 200
   $searchCancelReply = Invoke-BridgeCli @('cancel', '--workspace', $workspace, '--target-request-id', 'req-win-search-cancel', '--request-id', 'req-win-search-cancel-sender', '--json')
   if (-not $searchProc.WaitForExit(10000)) {
@@ -89,7 +89,7 @@ try {
   $readCancelOut = Join-Path $RunDir 'windows_read_cancel.out'
   $readCancelErr = Join-Path $RunDir 'windows_read_cancel.err'
   Remove-Item -Force $readCancelOut, $readCancelErr -ErrorAction SilentlyContinue
-  $readProc = Start-Process -FilePath $Cli -ArgumentList @('read', '--workspace', $workspace, '--path', 'docs dir/big.txt', '--request-id', 'req-win-read-cancel', '--stream', '--chunk-bytes', '64', '--timeout-ms', '30000', '--json') -PassThru -RedirectStandardOutput $readCancelOut -RedirectStandardError $readCancelErr
+  $readProc = Start-BridgeCliAsync -CommandArgs @('read', '--workspace', $workspace, '--path', 'docs dir/big.txt', '--request-id', 'req-win-read-cancel', '--stream', '--chunk-bytes', '64', '--timeout-ms', '30000', '--json') -StdoutPath $readCancelOut -StderrPath $readCancelErr
   Start-Sleep -Milliseconds 200
   $readCancelReply = Invoke-BridgeCli @('cancel', '--workspace', $workspace, '--target-request-id', 'req-win-read-cancel', '--request-id', 'req-win-read-cancel-sender', '--json')
   if (-not $readProc.WaitForExit(10000)) {

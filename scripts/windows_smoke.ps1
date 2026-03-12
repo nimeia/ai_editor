@@ -42,6 +42,19 @@ function Get-CmakeGenerator {
   return ($line.Line -replace '^CMAKE_GENERATOR:INTERNAL=', '')
 }
 
+function Invoke-CheckedCommand {
+  param(
+    [Parameter(Mandatory = $true)][string]$FilePath,
+    [Parameter(ValueFromRemainingArguments = $true)][string[]]$Arguments
+  )
+
+  & $FilePath @Arguments
+  if ($LASTEXITCODE -ne 0) {
+    $quotedArgs = ($Arguments | ForEach-Object { if ($_ -match '\s') { '"' + $_ + '"' } else { $_ } }) -join ' '
+    throw "command failed ($LASTEXITCODE): $FilePath $quotedArgs"
+  }
+}
+
 if (-not $BuildDir) {
   $BuildDir = Join-Path $RepoRoot 'build-win'
 }
@@ -58,9 +71,9 @@ $cli = Get-BuildExecutablePath -BuildDir $BuildDir -TargetSubdir 'apps\bridge_cl
 if ($Rebuild -or -not (Test-Path $daemon) -or -not (Test-Path $cli)) {
   $generator = Get-CmakeGenerator -BuildDir $BuildDir
   if (-not $generator) {
-    cmake -S $RepoRoot -B $BuildDir -G "Visual Studio 17 2022" -A x64
+    Invoke-CheckedCommand cmake -S $RepoRoot -B $BuildDir -G "Visual Studio 17 2022" -A x64
   }
-  cmake --build $BuildDir --config $Config
+  Invoke-CheckedCommand cmake --build $BuildDir --config $Config
 
   $daemon = Get-BuildExecutablePath -BuildDir $BuildDir -TargetSubdir 'apps\bridge_daemon' -ExeName 'bridge_daemon.exe' -Config $Config
   $cli = Get-BuildExecutablePath -BuildDir $BuildDir -TargetSubdir 'apps\bridge_cli' -ExeName 'bridge_cli.exe' -Config $Config
@@ -74,7 +87,7 @@ $daemon = (Resolve-Path $daemon).Path
 $cli = (Resolve-Path $cli).Path
 
 if ($RunTests) {
-  ctest --test-dir $BuildDir -C $Config --output-on-failure
+  Invoke-CheckedCommand ctest --test-dir $BuildDir -C $Config --output-on-failure
 }
 
 $workspace = Join-Path $BuildDir 'smoke-workspace'

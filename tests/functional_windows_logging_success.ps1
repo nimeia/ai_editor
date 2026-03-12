@@ -165,7 +165,8 @@ function Assert-LoggedSuccessConsistency {
   Assert-NonNegativeIntegerString -Value $auditRecord.RequestBytes -Label "audit request_bytes"
   Assert-NonNegativeIntegerString -Value $auditRecord.ResponseBytes -Label "audit response_bytes"
   Assert-True ([int64]$auditRecord.RequestBytes -gt 0) "audit request_bytes should be > 0 for $RequestId"
-  Assert-True ([int64]$auditRecord.ResponseBytes -eq $ResponseText.Length) "audit response_bytes should match emitted json length for $RequestId"
+  $responseBytes = [System.Text.Encoding]::UTF8.GetByteCount($ResponseText)
+  Assert-True ([int64]$auditRecord.ResponseBytes -eq $responseBytes) "audit response_bytes should match emitted json utf-8 byte length for $RequestId"
   Assert-True ($auditRecord.Timestamp -match '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$') "audit timestamp format mismatch for $RequestId"
 }
 

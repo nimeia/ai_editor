@@ -56,7 +56,10 @@ static void handle_request_adapter(const std::string& request,
 
   auto tracked_emit = [&](const std::string& frame) -> bool {
     response_bytes += frame.size();
-    if (frame.find("\"type\":\"final\"") != std::string::npos) {
+    const bool is_stream_chunk = frame.find("\"type\":\"chunk\"") != std::string::npos;
+    const bool is_stream_final = frame.find("\"type\":\"final\"") != std::string::npos;
+    const bool is_single_response = !is_stream_chunk && frame.find("\"request_id\":") != std::string::npos && frame.find("\"ok\":") != std::string::npos;
+    if (is_stream_final || is_single_response) {
       ok = frame.find("\"ok\":true") != std::string::npos;
       truncated = frame.find("\"truncated\":true") != std::string::npos;
       if (!ok) {

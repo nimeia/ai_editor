@@ -269,6 +269,7 @@ std::string format_patch_rollback(const PatchRollbackResult& res) {
   std::ostringstream oss;
   oss << "{";
   oss << "\"path\":\"" << json_escape(res.path) << "\",";
+  oss << "\"restored\":" << (res.rolled_back ? "true" : "false") << ",";
   oss << "\"rolled_back\":" << (res.rolled_back ? "true" : "false") << ",";
   oss << "\"backup_id\":\"" << json_escape(res.backup_id) << "\",";
   oss << "\"current_mtime\":\"" << json_escape(res.current_mtime) << "\",";

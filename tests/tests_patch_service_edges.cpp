@@ -45,10 +45,13 @@ int main() {
   assert(!wrong_content.ok);
   assert(wrong_content.error == "preview content mismatch");
 
+  bridge::core::PatchBase wrong_base_ref;
+  wrong_base_ref.mtime = "mismatch";
+  wrong_base_ref.hash = state.current_hash;
   auto wrong_base = bridge::core::patch_apply(cfg,
                                               "docs/note.txt",
                                               "",
-                                              {.mtime = "mismatch", .hash = state.current_hash},
+                                              wrong_base_ref,
                                               "cli-001",
                                               "sess-001",
                                               "req-preview-wrong-base",

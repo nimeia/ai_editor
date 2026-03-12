@@ -102,26 +102,35 @@ function Assert-JsonLenGe {
 
 function Invoke-BridgeCli {
   param([string[]]$CommandArgs)
-  $output = & $script:BridgeCli @CommandArgs
-  if ($LASTEXITCODE -ne 0) {
-    $joinedOutput = if ($null -eq $output) { '' } else { [string]::Join("`n", $output) }
-    throw "bridge_cli failed: $($CommandArgs -join ' ')`n$joinedOutput"
+  $result = Invoke-BridgeCliAllowFail -CommandArgs $CommandArgs
+  if ($result.ExitCode -ne 0) {
+    throw "bridge_cli failed: $($CommandArgs -join ' ')`n$($result.Text)"
   }
-  if ($null -eq $output) {
-    return ''
-  }
-  return [string]::Join("`n", $output)
+  return $result.Text
 }
 
 function Invoke-BridgeCliAllowFail {
   param([string[]]$CommandArgs)
-  $output = & $script:BridgeCli @CommandArgs 2>&1
-  $text = ''
-  if ($null -ne $output) {
-    $text = [string]::Join("`n", $output)
+  $capture = New-BridgeCliCapturePaths
+  $startParams = @{
+    FilePath = $script:BridgeCli
+    Wait = $true
+    PassThru = $true
+    NoNewWindow = $true
+    RedirectStandardOutput = $capture.StdoutPath
+    RedirectStandardError = $capture.StderrPath
   }
+  $joinedArgs = Join-BridgeCommandArgs $CommandArgs
+  if (-not [string]::IsNullOrEmpty($joinedArgs)) {
+    $startParams.ArgumentList = $joinedArgs
+  }
+  $proc = Start-Process @startParams
+  $stdout = if (Test-Path $capture.StdoutPath) { [System.IO.File]::ReadAllText($capture.StdoutPath) } else { '' }
+  $stderr = if (Test-Path $capture.StderrPath) { [System.IO.File]::ReadAllText($capture.StderrPath) } else { '' }
+  Remove-Item -Force $capture.StdoutPath, $capture.StderrPath -ErrorAction SilentlyContinue
+  $text = ($stdout + $stderr) -replace '(\r\n|\n)\z', ''
   return @{
-    ExitCode = $LASTEXITCODE
+    ExitCode = $proc.ExitCode
     Text = $text
   }
 }
@@ -143,7 +152,7 @@ function Wait-BridgeReady {
     $stderrPath = Join-Path $script:BridgeRunDir 'wait-ready.stderr.log'
     Remove-Item -Force $stdoutPath, $stderrPath -ErrorAction SilentlyContinue
     $probe = Start-Process -FilePath $script:BridgeCli `
-      -ArgumentList ('ping "--workspace" "{0}" "--json"' -f ($script:BridgeWorkspace -replace '"', '\"')) `
+      -ArgumentList (Join-BridgeCommandArgs @('ping', '--workspace', $script:BridgeWorkspace, '--json')) `
       -Wait `
       -PassThru `
       -NoNewWindow `
@@ -188,8 +197,7 @@ function Start-BridgeDaemon {
   Stop-BridgeDaemonProcesses
   Write-BridgeLog "starting daemon for workspace: $script:BridgeWorkspace"
   $daemonArgs = @('--workspace', $script:BridgeWorkspace) + $ExtraArgs
-  $daemonArgLine = [string]::Join(' ', ($daemonArgs | ForEach-Object { '"{0}"' -f ($_ -replace '"', '\"') }))
-  $script:BridgeDaemonProc = Start-Process -FilePath $script:BridgeDaemon -ArgumentList $daemonArgLine -PassThru -RedirectStandardOutput $script:BridgeDaemonStdoutLog -RedirectStandardError $script:BridgeDaemonStderrLog
+  $script:BridgeDaemonProc = Start-Process -FilePath $script:BridgeDaemon -ArgumentList (Join-BridgeCommandArgs $daemonArgs) -PassThru -RedirectStandardOutput $script:BridgeDaemonStdoutLog -RedirectStandardError $script:BridgeDaemonStderrLog
   Wait-BridgeReady
 }
 
@@ -248,4 +256,35 @@ function Initialize-BridgeTest {
   $script:BridgeRunDir = $RunDir
   $script:BridgeWorkspace = $Workspace
   New-Item -ItemType Directory -Force -Path $RunDir | Out-Null
+}
+
+function Join-BridgeCommandArgs {
+  param([string[]]$Arguments)
+  if ($null -eq $Arguments -or $Arguments.Count -eq 0) {
+    return ''
+  }
+  return [string]::Join(' ', ($Arguments | ForEach-Object { '"{0}"' -f ($_ -replace '"', '\"') }))
+}
+
+function New-BridgeCliCapturePaths {
+  $baseDir = if ([string]::IsNullOrEmpty($script:BridgeRunDir)) { [System.IO.Path]::GetTempPath() } else { $script:BridgeRunDir }
+  New-Item -ItemType Directory -Force -Path $baseDir | Out-Null
+  $id = [guid]::NewGuid().ToString('N')
+  return @{
+    StdoutPath = Join-Path $baseDir "bridge-cli-$id.stdout.log"
+    StderrPath = Join-Path $baseDir "bridge-cli-$id.stderr.log"
+  }
+}
+
+function Start-BridgeCliAsync {
+  param(
+    [string[]]$CommandArgs,
+    [string]$StdoutPath,
+    [string]$StderrPath
+  )
+  return Start-Process -FilePath $script:BridgeCli `
+    -ArgumentList (Join-BridgeCommandArgs $CommandArgs) `
+    -PassThru `
+    -RedirectStandardOutput $StdoutPath `
+    -RedirectStandardError $StderrPath
 }

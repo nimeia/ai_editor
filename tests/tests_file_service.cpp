@@ -41,7 +41,11 @@ int main() {
   assert(saw_docs);
   assert(saw_modules);
 
-  auto list_recursive = bridge::core::fs_list(cfg, ".", {.recursive = true, .include_excluded = false, .max_results = 200});
+  bridge::core::FsListOptions list_opts;
+  list_opts.recursive = true;
+  list_opts.include_excluded = false;
+  list_opts.max_results = 200;
+  auto list_recursive = bridge::core::fs_list(cfg, ".", list_opts);
   assert(list_recursive.ok);
   bool saw_excluded_child = false;
   for (const auto& e : list_recursive.entries) {
