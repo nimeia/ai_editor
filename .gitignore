@@ -11,3 +11,4 @@
 *.log
 *.sock
 /.p6*/
+/dist/
