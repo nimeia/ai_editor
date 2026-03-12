@@ -17,7 +17,7 @@ The repository is now at a **V1-ready baseline**:
 - Streaming baseline completed for search, file reads, and patch preview
 - Patch preview lifecycle + conflict diagnostics + rollback metadata completed
 
-P6 validation assets are now in place. Linux/POSIX validation has been rerun in this phase; Windows still needs one native rerun before final release sign-off.
+P6 validation assets are now in place. Linux/POSIX validation has been rerun in this phase; Windows now has a fuller functional matrix for native smoke, stream/cancel/timeout, CLI contract, logging code consistency, logging success completeness, and release/package closure, but still needs one native rerun before final release sign-off.
 
 ## Implemented capabilities
 
@@ -128,6 +128,86 @@ cmake --build build --config Release
 ctest --test-dir build -C Release --output-on-failure
 ```
 
+## Test matrix
+
+### Shared unit / core tests
+
+- `test_instance`
+- `test_path_policy`
+- `test_file_service`
+- `test_file_stream`
+- `test_search_service`
+- `test_patch_service`
+- `test_platform_transport`
+- `test_logging`
+- `test_error_codes`
+- `test_file_service_edges`
+- `test_search_service_edges`
+- `test_patch_service_edges`
+- `test_bridge_cli_version`
+- `test_bridge_daemon_version`
+
+### POSIX integration / functional tests
+
+- integration: `test_integration_ping_info`, `test_integration_file_ops`, `test_integration_search_ops`, `test_integration_patch_ops`, `test_integration_logging_ops`, `test_integration_cancel_ops`, `test_integration_stream_ops`, `test_integration_read_stream_ops`, `test_integration_patch_stream_ops`, `test_integration_timeout_ops`
+- functional: `test_functional_workspace_ops`, `test_functional_workspace_edges`, `test_functional_fs_ops`, `test_functional_search_ops`, `test_functional_patch_lifecycle`, `test_functional_stream_cancel_timeout`, `test_functional_cancel_edges`, `test_functional_logging_release`, `test_functional_cli_contract`
+
+### Windows functional tests
+
+- `test_functional_windows_native`
+- `test_functional_windows_stream_cancel_timeout`
+- `test_functional_windows_cli_contract`
+- `test_functional_windows_logging_codes`
+- `test_functional_windows_logging_success`
+- `test_functional_windows_release_package`
+
+Windows coverage now closes the loop across these domains:
+
+- native smoke and Unicode / space-path coverage
+- stream / cancel / timeout behavior
+- CLI usability and normalized error-code contract
+- runtime.log / audit.log error-path code consistency
+- runtime.log / audit.log success-path field completeness
+- install / package / unzip smoke
+
+## Recommended execution order
+
+### POSIX
+
+```bash
+ctest --test-dir build --output-on-failure
+```
+
+For stepwise triage, run in this order:
+
+1. shared unit/core tests
+2. POSIX integration tests
+3. POSIX functional tests
+4. `./scripts/validate_v1.sh --build-dir build --jobs 1`
+5. `./scripts/package_release.sh --build-dir build --out-dir dist --generator TGZ --run-tests --jobs 1`
+
+### Windows
+
+Recommended stepwise order on a native Windows host:
+
+```powershell
+ctest --test-dir build -C Release -R "^(test_instance|test_path_policy|test_file_service|test_file_stream|test_search_service|test_patch_service|test_platform_transport|test_logging|test_error_codes|test_file_service_edges|test_search_service_edges|test_patch_service_edges|test_bridge_cli_version|test_bridge_daemon_version)$" --output-on-failure
+ctest --test-dir build -C Release -R "^test_functional_windows_native$" --output-on-failure
+ctest --test-dir build -C Release -R "^test_functional_windows_stream_cancel_timeout$" --output-on-failure
+ctest --test-dir build -C Release -R "^test_functional_windows_cli_contract$" --output-on-failure
+ctest --test-dir build -C Release -R "^test_functional_windows_logging_(codes|success)$" --output-on-failure
+ctest --test-dir build -C Release -R "^test_functional_windows_release_package$" --output-on-failure
+```
+
+For a one-shot rerun:
+
+```powershell
+ctest --test-dir build -C Release --output-on-failure
+pwsh ./scripts/windows_smoke.ps1 -BuildDir ./build -Config Release
+pwsh ./scripts/validate_v1.ps1 -BuildDir build -Config Release -Jobs 1
+pwsh ./scripts/package_release.ps1 -BuildDir build -Config Release -OutDir dist -Generator ZIP -RunTests -Jobs 1
+```
+
 ## Manual run
 
 ### POSIX example
@@ -177,6 +257,14 @@ The smoke and native integration cover:
 - patch-preview / patch-apply / history
 - runtime log / audit log verification
 - direct daemon stdout/stderr dump on failure
+
+For the broader Windows-native matrix, also run:
+
+- `tests/functional_windows_stream_cancel_timeout.ps1`
+- `tests/functional_windows_cli_contract.ps1`
+- `tests/functional_windows_logging_codes.ps1`
+- `tests/functional_windows_logging_success.ps1`
+- `tests/functional_windows_release_package.ps1`
 
 ## Release engineering baseline
 

@@ -30,6 +30,22 @@ add_executable(test_logging tests_logging.cpp)
 target_link_libraries(test_logging PRIVATE bridge_core)
 add_test(NAME test_logging COMMAND test_logging)
 
+add_executable(test_error_codes tests_error_codes.cpp)
+target_link_libraries(test_error_codes PRIVATE bridge_core)
+add_test(NAME test_error_codes COMMAND test_error_codes)
+
+add_executable(test_file_service_edges tests_file_service_edges.cpp)
+target_link_libraries(test_file_service_edges PRIVATE bridge_core)
+add_test(NAME test_file_service_edges COMMAND test_file_service_edges)
+
+add_executable(test_search_service_edges tests_search_service_edges.cpp)
+target_link_libraries(test_search_service_edges PRIVATE bridge_core)
+add_test(NAME test_search_service_edges COMMAND test_search_service_edges)
+
+add_executable(test_patch_service_edges tests_patch_service_edges.cpp)
+target_link_libraries(test_patch_service_edges PRIVATE bridge_core)
+add_test(NAME test_patch_service_edges COMMAND test_patch_service_edges)
+
 add_test(NAME test_bridge_cli_version COMMAND $<TARGET_FILE:bridge_cli> --version)
 add_test(NAME test_bridge_daemon_version COMMAND $<TARGET_FILE:bridge_daemon> --version)
 
@@ -40,6 +56,36 @@ if(WIN32)
     COMMAND ${AI_BRIDGE_POWERSHELL} -File ${CMAKE_CURRENT_SOURCE_DIR}/functional_windows_native.ps1 $<TARGET_FILE:bridge_daemon> $<TARGET_FILE:bridge_cli> ${CMAKE_CURRENT_BINARY_DIR}
   )
   set_tests_properties(test_functional_windows_native PROPERTIES ENVIRONMENT "CTEST_OUTPUT_ON_FAILURE=1")
+
+  add_test(
+    NAME test_functional_windows_stream_cancel_timeout
+    COMMAND ${AI_BRIDGE_POWERSHELL} -File ${CMAKE_CURRENT_SOURCE_DIR}/functional_windows_stream_cancel_timeout.ps1 $<TARGET_FILE:bridge_daemon> $<TARGET_FILE:bridge_cli> ${CMAKE_CURRENT_BINARY_DIR}
+  )
+  set_tests_properties(test_functional_windows_stream_cancel_timeout PROPERTIES ENVIRONMENT "CTEST_OUTPUT_ON_FAILURE=1")
+
+  add_test(
+    NAME test_functional_windows_release_package
+    COMMAND ${AI_BRIDGE_POWERSHELL} -File ${CMAKE_CURRENT_SOURCE_DIR}/functional_windows_release_package.ps1 $<TARGET_FILE:bridge_daemon> $<TARGET_FILE:bridge_cli> ${CMAKE_CURRENT_BINARY_DIR}
+  )
+  set_tests_properties(test_functional_windows_release_package PROPERTIES ENVIRONMENT "CTEST_OUTPUT_ON_FAILURE=1")
+
+  add_test(
+    NAME test_functional_windows_cli_contract
+    COMMAND ${AI_BRIDGE_POWERSHELL} -File ${CMAKE_CURRENT_SOURCE_DIR}/functional_windows_cli_contract.ps1 $<TARGET_FILE:bridge_daemon> $<TARGET_FILE:bridge_cli> ${CMAKE_CURRENT_BINARY_DIR}
+  )
+  set_tests_properties(test_functional_windows_cli_contract PROPERTIES ENVIRONMENT "CTEST_OUTPUT_ON_FAILURE=1")
+
+  add_test(
+    NAME test_functional_windows_logging_codes
+    COMMAND ${AI_BRIDGE_POWERSHELL} -File ${CMAKE_CURRENT_SOURCE_DIR}/functional_windows_logging_codes.ps1 $<TARGET_FILE:bridge_daemon> $<TARGET_FILE:bridge_cli> ${CMAKE_CURRENT_BINARY_DIR}
+  )
+  set_tests_properties(test_functional_windows_logging_codes PROPERTIES ENVIRONMENT "CTEST_OUTPUT_ON_FAILURE=1")
+
+  add_test(
+    NAME test_functional_windows_logging_success
+    COMMAND ${AI_BRIDGE_POWERSHELL} -File ${CMAKE_CURRENT_SOURCE_DIR}/functional_windows_logging_success.ps1 $<TARGET_FILE:bridge_daemon> $<TARGET_FILE:bridge_cli> ${CMAKE_CURRENT_BINARY_DIR}
+  )
+  set_tests_properties(test_functional_windows_logging_success PROPERTIES ENVIRONMENT "CTEST_OUTPUT_ON_FAILURE=1")
 else()
   add_test(
     NAME test_integration_ping_info
@@ -108,6 +154,12 @@ else()
   set_tests_properties(test_functional_workspace_ops PROPERTIES ENVIRONMENT "CTEST_OUTPUT_ON_FAILURE=1")
 
   add_test(
+    NAME test_functional_workspace_edges
+    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/functional_workspace_edges.sh $<TARGET_FILE:bridge_daemon> $<TARGET_FILE:bridge_cli> ${CMAKE_CURRENT_BINARY_DIR}
+  )
+  set_tests_properties(test_functional_workspace_edges PROPERTIES ENVIRONMENT "CTEST_OUTPUT_ON_FAILURE=1")
+
+  add_test(
     NAME test_functional_fs_ops
     COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/functional_fs_ops.sh $<TARGET_FILE:bridge_daemon> $<TARGET_FILE:bridge_cli> ${CMAKE_CURRENT_BINARY_DIR}
   )
@@ -132,8 +184,20 @@ else()
   set_tests_properties(test_functional_stream_cancel_timeout PROPERTIES ENVIRONMENT "CTEST_OUTPUT_ON_FAILURE=1")
 
   add_test(
+    NAME test_functional_cancel_edges
+    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/functional_cancel_edges.sh $<TARGET_FILE:bridge_daemon> $<TARGET_FILE:bridge_cli> ${CMAKE_CURRENT_BINARY_DIR}
+  )
+  set_tests_properties(test_functional_cancel_edges PROPERTIES ENVIRONMENT "CTEST_OUTPUT_ON_FAILURE=1")
+
+  add_test(
     NAME test_functional_logging_release
     COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/functional_logging_release.sh $<TARGET_FILE:bridge_daemon> $<TARGET_FILE:bridge_cli> ${CMAKE_CURRENT_BINARY_DIR}
   )
   set_tests_properties(test_functional_logging_release PROPERTIES ENVIRONMENT "CTEST_OUTPUT_ON_FAILURE=1")
+
+  add_test(
+    NAME test_functional_cli_contract
+    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/functional_cli_contract.sh $<TARGET_FILE:bridge_daemon> $<TARGET_FILE:bridge_cli> ${CMAKE_CURRENT_BINARY_DIR}
+  )
+  set_tests_properties(test_functional_cli_contract PROPERTIES ENVIRONMENT "CTEST_OUTPUT_ON_FAILURE=1")
 endif()

@@ -71,5 +71,6 @@
 
 - [x] P6 Linux validation rerun + validation/report scripts baseline
 - [x] P6 Windows validation script structured summary output baseline
+- [x] P6 test documentation sync for Windows matrix / execution order
 - [ ] P6 Windows native rerun on a real Windows host
 - [x] final V1 release checklist
