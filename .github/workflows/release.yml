@@ -54,15 +54,7 @@ jobs:
         shell: bash
         run: bash ./scripts/validate_v1.sh --build-dir build --config Release --jobs 1
 
-      - name: Rename checksum file
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ -f .p6_validation_dist/SHA256SUMS.txt ]]; then
-            mv .p6_validation_dist/SHA256SUMS.txt .p6_validation_dist/SHA256SUMS-${{ matrix.id }}.txt
-          fi
-
-      - name: Upload release bundle
+      - name: Upload release packages
         uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.id }}
@@ -70,7 +62,9 @@ jobs:
           retention-days: 14
           include-hidden-files: true
           path: |
-            .p6_validation_dist/*
+            .p6_validation_dist/*.tar.gz
+            .p6_validation_dist/*.tgz
+            .p6_validation_dist/*.zip
 
   package_windows:
     name: package-windows
@@ -85,14 +79,7 @@ jobs:
         shell: pwsh
         run: pwsh ./scripts/validate_v1.ps1 -BuildDir build -Config Release -Jobs 1
 
-      - name: Rename checksum file
-        shell: pwsh
-        run: |
-          if (Test-Path .p6_validation_dist/SHA256SUMS.txt) {
-            Move-Item .p6_validation_dist/SHA256SUMS.txt .p6_validation_dist/SHA256SUMS-windows.txt -Force
-          }
-
-      - name: Upload release bundle
+      - name: Upload release packages
         uses: actions/upload-artifact@v4
         with:
           name: release-windows
@@ -100,8 +87,9 @@ jobs:
           retention-days: 14
           include-hidden-files: true
           path: |
-            .p6_validation_dist/*
-            .p6_validation_summary/*
+            .p6_validation_dist/*.tar.gz
+            .p6_validation_dist/*.tgz
+            .p6_validation_dist/*.zip
 
   publish_release:
     name: publish-release
@@ -164,9 +152,34 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s nullglob
-          mapfile -t files < <(find release-assets -type f | sort)
+          mapfile -t files < <(find release-assets -type f \( -name 'ai_bridge-*.tar.gz' -o -name 'ai_bridge-*.tgz' -o -name 'ai_bridge-*.zip' \) | sort)
           if (( ${#files[@]} == 0 )); then
-            echo "No release assets found" >&2
+            echo "No packaged release artifacts found" >&2
             exit 1
           fi
-          gh release upload "$RELEASE_TAG" "${files[@]}" --clobber
+
+          declare -A seen=()
+          declare -A keep=()
+          for file in "${files[@]}"; do
+            name="$(basename "$file")"
+            if [[ -n "${seen[$name]:-}" ]]; then
+              echo "Duplicate release asset filename detected: $name" >&2
+              echo "Each uploaded asset must have a unique basename." >&2
+              exit 1
+            fi
+            seen["$name"]=1
+            keep["$name"]=1
+          done
+
+          mapfile -t existing < <(gh release view "$RELEASE_TAG" --json assets --jq '.assets[].name' 2>/dev/null || true)
+          for name in "${existing[@]}"; do
+            if [[ -z "${keep[$name]:-}" ]]; then
+              gh release delete-asset "$RELEASE_TAG" "$name" --yes >/dev/null 2>&1 || true
+            fi
+          done
+
+          for file in "${files[@]}"; do
+            name="$(basename "$file")"
+            gh release delete-asset "$RELEASE_TAG" "$name" --yes >/dev/null 2>&1 || true
+            gh release upload "$RELEASE_TAG" "$file"
+          done
