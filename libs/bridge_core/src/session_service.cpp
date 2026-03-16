@@ -11,6 +11,7 @@
 #include <map>
 #include <set>
 #include <sstream>
+#include <type_traits>
 
 namespace fs = std::filesystem;
 
@@ -437,6 +438,35 @@ std::string join_non_empty(const std::string& a, const std::string& b) {
   return a + " | " + b;
 }
 
+template <typename Integer>
+std::string integral_to_string(Integer value) {
+  static_assert(std::is_integral_v<Integer>, "integral_to_string expects an integral type");
+  using Unsigned = std::make_unsigned_t<std::remove_cv_t<Integer>>;
+  bool negative = false;
+  Unsigned magnitude = 0;
+  if constexpr (std::is_signed_v<Integer>) {
+    if (value < 0) {
+      negative = true;
+      magnitude = static_cast<Unsigned>(-(value + 1));
+      ++magnitude;
+    } else {
+      magnitude = static_cast<Unsigned>(value);
+    }
+  } else {
+    magnitude = static_cast<Unsigned>(value);
+  }
+  if (magnitude == 0) return "0";
+  std::string out;
+  while (magnitude > 0) {
+    const auto digit = static_cast<unsigned>(magnitude % static_cast<Unsigned>(10));
+    out.push_back(static_cast<char>('0' + digit));
+    magnitude /= static_cast<Unsigned>(10);
+  }
+  if (negative) out.push_back('-');
+  std::reverse(out.begin(), out.end());
+  return out;
+}
+
 std::string content_hash(const std::string& content) {
   return hex64(fnv1a64(content));
 }
@@ -477,7 +507,7 @@ FileFingerprint fingerprint_file(const WorkspaceConfig& workspace, const std::st
     if (error) *error = ec.message();
     return out;
   }
-  out.mtime = std::to_string(ft.time_since_epoch().count());
+  out.mtime = integral_to_string(ft.time_since_epoch().count());
   return out;
 }
 

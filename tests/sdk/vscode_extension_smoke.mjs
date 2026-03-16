@@ -2,11 +2,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 const require = createRequire(import.meta.url);
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const { BridgeCliBridge, renderPreviewHtml } = require('../../extensions/vscode-bridge/lib/bridge_client.js');
 function assert(condition, message) { if (!condition) throw new Error(message); }
 const [cli, workspace] = process.argv.slice(2);
-const packageJson = JSON.parse(fs.readFileSync(path.resolve('extensions/vscode-bridge/package.json'), 'utf8'));
+const packageJsonPath = path.resolve(__dirname, '../../extensions/vscode-bridge/package.json');
+const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 assert(packageJson.contributes.commands.some((item) => item.command === 'bridgeAi.previewSession'), 'preview command missing');
 assert(packageJson.contributes.views.explorer.some((item) => item.id === 'bridgeAi.stagedChanges'), 'staged changes view missing');
 const tempFile = path.join(os.tmpdir(), `bridge_vscode_smoke_${Date.now()}.txt`);
