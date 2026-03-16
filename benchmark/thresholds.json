@@ -1,0 +1,26 @@
+{
+  "suite": {
+    "min_pass_rate": 1.0,
+    "max_failed_scenarios": 0,
+    "max_total_duration_ms": 30000
+  },
+  "default_scenario": {
+    "required": true,
+    "min_step_pass_rate": 1.0,
+    "max_duration_ms": 10000
+  },
+  "scenarios": {
+    "search-high-similarity-baseline": {
+      "max_duration_ms": 4000
+    },
+    "session-rebase-baseline": {
+      "max_duration_ms": 5000
+    },
+    "session-multifile": {
+      "max_duration_ms": 6000
+    },
+    "structure-roundtrip": {
+      "max_duration_ms": 6000
+    }
+  }
+}

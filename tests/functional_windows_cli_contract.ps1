@@ -29,7 +29,7 @@ Start-BridgeDaemon -Name 'functional_windows_cli_contract'
 try {
   $noArgs = Invoke-BridgeCliAllowFail -CommandArgs @()
   Assert-True ($noArgs.ExitCode -eq 1) 'bridge_cli with no args should exit 1'
-  Assert-Contains $noArgs.Text 'usage: bridge_cli <ping|info|open|resolve|list|stat|read|read-range|search-text|search-regex|cancel|patch-preview|patch-apply|patch-rollback|history>' 'no-arg usage text should be shown'
+  Assert-Contains $noArgs.Text 'usage: bridge_cli <ping|info|open|resolve|list|stat|read|read-range|write|mkdir|move|copy|rename|search-text|search-regex|session-begin|session-inspect|session-preview|session-commit|session-abort|session-drop-change|session-drop-path|session-recover|session-snapshot|edit-replace-range|edit-replace-block|edit-insert-before|edit-insert-after|edit-delete-block|markdown-replace-section|markdown-insert-after-heading|markdown-upsert-section|json-replace-value|json-upsert-key|json-append-array-item|yaml-replace-value|yaml-upsert-key|yaml-append-item|html-replace-node|html-insert-after-node|html-set-attribute|cancel|patch-preview|patch-apply|patch-rollback|history>' 'no-arg usage text should be shown'
 
   $unsupported = Invoke-BridgeCliAllowFail @('not-a-command')
   Assert-True ($unsupported.ExitCode -eq 1) 'unsupported command should exit 1'
@@ -64,6 +64,21 @@ try {
   Assert-Contains $resolveText 'workspace_root: ' 'resolve human output should include workspace root'
   Assert-Contains $resolveText 'relative_path: docs/sample.txt' 'resolve human output should include relative path'
   Assert-Contains $resolveText 'policy: normal' 'resolve human output should include policy'
+
+  $mkdirText = Invoke-BridgeCli @('mkdir', '--workspace', $workspace, '--path', 'docs/generated/nested')
+  Assert-Contains $mkdirText 'path: docs/generated/nested' 'mkdir human output should include path'
+
+  $writeText = Invoke-BridgeCli @('write', '--workspace', $workspace, '--path', 'docs/generated/nested/new.txt', '--content-file', $newContentFile)
+  Assert-Contains $writeText 'path: docs/generated/nested/new.txt' 'write human output should include path'
+
+  $moveText = Invoke-BridgeCli @('move', '--workspace', $workspace, '--path', 'docs/generated/nested/new.txt', '--target-path', 'docs/generated/moved.txt')
+  Assert-Contains $moveText 'target_path: docs/generated/moved.txt' 'move human output should include target path'
+
+  $copyText = Invoke-BridgeCli @('copy', '--workspace', $workspace, '--path', 'docs/generated/moved.txt', '--target-path', 'docs/generated/copies/copied.txt', '--create-parents')
+  Assert-Contains $copyText 'target_path: docs/generated/copies/copied.txt' 'copy human output should include target path'
+
+  $renameText = Invoke-BridgeCli @('rename', '--workspace', $workspace, '--path', 'docs/generated/moved.txt', '--target-path', 'docs/generated/renamed.txt')
+  Assert-Contains $renameText 'target_path: docs/generated/renamed.txt' 'rename human output should include target path'
 
   $previewText = Invoke-BridgeCli @('patch-preview', '--workspace', $workspace, '--path', 'docs/sample.txt', '--new-content-file', $newContentFile)
   Assert-Contains $previewText 'preview_id: ' 'patch-preview human output should include preview id'

@@ -67,6 +67,14 @@ bool extension_allowed(const fs::path& path, const std::vector<std::string>& ext
   return std::find(exts.begin(), exts.end(), ext) != exts.end();
 }
 
+bool path_allowed(const std::string& rel, const SearchOptions& options) {
+  if (!options.exact_path.empty() && rel != options.exact_path) return false;
+  if (!options.directory_prefix.empty()) {
+    if (rel.rfind(options.directory_prefix, 0) != 0) return false;
+  }
+  return true;
+}
+
 std::string make_snippet(const std::vector<std::string>& lines,
                          std::size_t hit_start,
                          std::size_t hit_end,
@@ -83,10 +91,33 @@ std::string make_snippet(const std::vector<std::string>& lines,
   return oss.str();
 }
 
+std::string make_anchor(const std::vector<std::string>& lines,
+                        std::size_t line_index) {
+  std::string before;
+  std::string after;
+  if (line_index > 1 && line_index - 2 < lines.size()) before = lines[line_index - 2];
+  if (line_index < lines.size()) after = lines[line_index];
+  if (!before.empty() && !after.empty()) return before + " | " + after;
+  if (!before.empty()) return before;
+  return after;
+}
+
+double base_confidence(std::size_t line_start, const SearchOptions& options) {
+  if (options.min_line > 0 && line_start < options.min_line) return 0.0;
+  if (options.max_line > 0 && line_start > options.max_line) return 0.0;
+  return 1.0;
+}
+
+std::string make_match_id(const std::string& rel, std::size_t line_start, const std::string& snippet) {
+  std::hash<std::string> h;
+  return rel + ":" + std::to_string(line_start) + ":" + std::to_string(h(snippet));
+}
+
 template <typename Matcher>
 SearchResult run_search(const WorkspaceConfig& workspace,
                         const SearchOptions& options,
-                        Matcher matcher) {
+                        Matcher matcher,
+                        const std::string& selector_reason) {
   SearchResult out;
   const auto started = std::chrono::steady_clock::now();
   const auto delay_ms = env_delay_ms();
@@ -129,6 +160,10 @@ SearchResult run_search(const WorkspaceConfig& workspace,
 
   auto process_file = [&](const fs::path& path, const std::string& rel) {
     if (check_interrupt()) return false;
+    if (!path_allowed(rel, options)) {
+      ++out.skipped_files;
+      return true;
+    }
     if (!extension_allowed(path, options.extensions)) {
       ++out.skipped_files;
       return true;
@@ -153,13 +188,22 @@ SearchResult run_search(const WorkspaceConfig& workspace,
     for (std::size_t i = 0; i < lines.size(); ++i) {
       if (delay_ms > 0) std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
       if (check_interrupt()) return false;
+      const auto line_no = i + 1;
+      if (options.min_line > 0 && line_no < options.min_line) continue;
+      if (options.max_line > 0 && line_no > options.max_line) continue;
       if (!matcher(lines[i])) continue;
       ++matches_in_file;
       SearchMatch m;
       m.path = rel;
-      m.line_start = i + 1;
-      m.line_end = i + 1;
-      m.snippet = make_snippet(lines, i + 1, i + 1, options.context_before, options.context_after);
+      m.line_start = line_no;
+      m.line_end = line_no;
+      m.snippet = make_snippet(lines, line_no, line_no, options.context_before, options.context_after);
+      m.anchor = make_anchor(lines, line_no);
+      m.selector_reason = selector_reason;
+      m.confidence = base_confidence(line_no, options);
+      m.scope_path = options.root_path.empty() ? "." : options.root_path;
+      m.block_type = "line";
+      m.match_id = make_match_id(rel, line_no, m.snippet);
       if (options.on_match && !options.on_match(m)) {
         out.cancelled = true;
         out.truncated = true;
@@ -179,6 +223,11 @@ SearchResult run_search(const WorkspaceConfig& workspace,
   if (fs::is_regular_file(root)) {
     const auto rel = resolved.normalized_relative_path;
     process_file(root, rel);
+    std::sort(out.matches.begin(), out.matches.end(), [](const SearchMatch& a, const SearchMatch& b) {
+      if (a.confidence != b.confidence) return a.confidence > b.confidence;
+      if (a.path != b.path) return a.path < b.path;
+      return a.line_start < b.line_start;
+    });
     out.ok = !out.timed_out && !out.cancelled;
     return out;
   }
@@ -201,6 +250,11 @@ SearchResult run_search(const WorkspaceConfig& workspace,
     if (!process_file(it->path(), rel)) break;
   }
 
+  std::sort(out.matches.begin(), out.matches.end(), [](const SearchMatch& a, const SearchMatch& b) {
+    if (a.confidence != b.confidence) return a.confidence > b.confidence;
+    if (a.path != b.path) return a.path < b.path;
+    return a.line_start < b.line_start;
+  });
   out.ok = !out.timed_out && !out.cancelled;
   return out;
 }
@@ -217,7 +271,7 @@ SearchResult search_text(const WorkspaceConfig& workspace,
   }
   return run_search(workspace, options, [&](const std::string& line) {
     return line.find(query) != std::string::npos;
-  });
+  }, "literal-query");
 }
 
 SearchResult search_regex(const WorkspaceConfig& workspace,
@@ -232,7 +286,7 @@ SearchResult search_regex(const WorkspaceConfig& workspace,
     const std::regex re(pattern);
     return run_search(workspace, options, [&](const std::string& line) {
       return std::regex_search(line, re);
-    });
+    }, "regex-query");
   } catch (const std::exception& e) {
     SearchResult out;
     out.error = e.what();

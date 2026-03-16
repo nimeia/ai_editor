@@ -32,6 +32,8 @@ install(FILES
   docs/08-v1-release-and-deployment.md
   docs/09-v1-validation-report.md
   docs/10-v1-release-checklist.md
+  docs/11-v1-text-editing-optimization-task.md
+  docs/12-controlled-editing-task.md
   DESTINATION ${CMAKE_INSTALL_DATADIR}/ai_bridge/docs)
 install(PROGRAMS scripts/windows_smoke.ps1 scripts/package_release.sh scripts/package_release.ps1 scripts/validate_v1.sh scripts/validate_v1.ps1 DESTINATION ${CMAKE_INSTALL_DATADIR}/ai_bridge/scripts)
 

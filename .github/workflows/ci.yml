@@ -56,6 +56,89 @@ jobs:
             build/Testing/**
             build/**/Testing/**
 
+  session_recovery_guard:
+    name: session-recovery-guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show toolchain
+        shell: bash
+        run: |
+          uname -a
+          cmake --version
+          ctest --version
+          python3 --version
+          node --version
+
+      - name: Configure session/recovery gate build
+        shell: bash
+        run: cmake -S . -B build-session-recovery -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build session/recovery gate targets
+        shell: bash
+        run: cmake --build build-session-recovery --parallel 2 --target bridge_cli bridge_daemon test_session_service
+
+      - name: List session/recovery labeled tests
+        shell: bash
+        run: ctest --test-dir build-session-recovery -N -L session_recovery
+
+      - name: Run session/recovery gate
+        shell: bash
+        run: ctest --test-dir build-session-recovery --output-on-failure --parallel 1 -L session_recovery
+
+      - name: Upload session/recovery artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: session-recovery-guard
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            build-session-recovery/Testing/**
+            build-session-recovery/**/Testing/**
+
+
+  benchmark_linux:
+    name: benchmark-linux
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show toolchain
+        shell: bash
+        run: |
+          uname -a
+          cmake --version
+          python3 --version
+          node --version
+
+      - name: Configure benchmark build
+        shell: bash
+        run: cmake -S . -B build-benchmark -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build benchmark binaries
+        shell: bash
+        run: cmake --build build-benchmark --parallel 2
+
+      - name: Run benchmark suite
+        shell: bash
+        run: bash ./scripts/run_benchmarks.sh build-benchmark .benchmark_reports .benchmark_run
+
+      - name: Upload benchmark reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-linux
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            .benchmark_reports/**
+            .benchmark_run/**
+
   validate_windows:
     name: validate-windows
     runs-on: windows-latest

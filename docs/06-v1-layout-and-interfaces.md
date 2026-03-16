@@ -1,5 +1,6 @@
-# 鐩綍缁撴瀯涓庢帴鍙ｆ竻鍗?
-## 鐩綍
+# 目录结构与接口清单
+
+## 目录
 
 ```text
 apps/
@@ -11,7 +12,8 @@ libs/
   bridge_transport/
 tests/
   integration_*.sh
-  functional_windows_native.ps1
+  functional_*.sh
+  functional_windows_*.ps1
   integration_windows_native.ps1
   tests_*.cpp
 docs/
@@ -22,17 +24,25 @@ docs/
   05-v1-plan.md
   06-v1-layout-and-interfaces.md
   07-v1-build-run-test-guide.md
+  08-v1-release-and-deployment.md
+  09-v1-validation-report.md
+  10-v1-release-checklist.md
+  11-v1-text-editing-optimization-task.md
 scripts/
+  package_release.sh
+  package_release.ps1
+  validate_v1.sh
+  validate_v1.ps1
   windows_smoke.ps1
 ```
 
-## 鍏抽敭鎺ュ彛 / 缁勪欢
+## 关键接口 / 组件
 
 ### Platform
 
 - `bridge::platform::RuntimePaths`
 - `bridge::platform::InstanceLock`
-- `bridge::platform::GetPlatformName`锛堝钩鍙拌瘖鏂級
+- `bridge::platform::GetPlatformName`（平台诊断）
 
 ### Transport
 
@@ -51,7 +61,7 @@ scripts/
 - `bridge::core::LoggingService`
 - `bridge::core::Protocol` / request-response serialization helpers
 
-## CLI 瀵瑰鍛戒护
+## CLI 对外命令
 
 - `ping`
 - `info`
@@ -61,6 +71,11 @@ scripts/
 - `stat`
 - `read`
 - `read-range`
+- `write`
+- `mkdir`
+- `move`
+- `copy`
+- `rename`
 - `search-text`
 - `search-regex`
 - `cancel`
@@ -69,9 +84,9 @@ scripts/
 - `patch-rollback`
 - `history`
 
-## 娴嬭瘯璧勪骇
+## 测试资产
 
-### 鍗曞厓娴嬭瘯
+### 单元测试
 
 - `tests_instance.cpp`
 - `tests_path_policy.cpp`
@@ -81,8 +96,12 @@ scripts/
 - `tests_patch_service.cpp`
 - `tests_logging.cpp`
 - `tests_platform_transport.cpp`
+- `tests_error_codes.cpp`
+- `tests_file_service_edges.cpp`
+- `tests_search_service_edges.cpp`
+- `tests_patch_service_edges.cpp`
 
-### 闆嗘垚娴嬭瘯
+### POSIX 集成 / 功能测试
 
 - `integration_ping_info.sh`
 - `integration_file_ops.sh`
@@ -94,7 +113,26 @@ scripts/
 - `integration_read_stream_ops.sh`
 - `integration_patch_stream_ops.sh`
 - `integration_timeout_ops.sh`
+- `functional_workspace_ops.sh`
+- `functional_workspace_edges.sh`
+- `functional_fs_ops.sh`
+- `functional_search_ops.sh`
+- `functional_patch_lifecycle.sh`
+- `functional_stream_cancel_timeout.sh`
+- `functional_cancel_edges.sh`
+- `functional_logging_release.sh`
+- `functional_cli_contract.sh`
+
+### Windows 测试与脚本
+
 - `functional_windows_native.ps1`
-  - Windows 鍘熺敓鍔熻兘娴嬭瘯鑴氭湰锛岃鐩?workspace / fs / search / patch / log 鍏抽敭璺緞
+  - Windows 原生功能测试脚本，覆盖 workspace / fs / search / patch / logging / Unicode 路径
 - `integration_windows_native.ps1`
-  - 鍏煎鍖呰鑴氭湰锛岃浆璋?`functional_windows_native.ps1`
+  - 兼容包装脚本，转调 `functional_windows_native.ps1`
+- `functional_windows_stream_cancel_timeout.ps1`
+- `functional_windows_cli_contract.ps1`
+- `functional_windows_logging_codes.ps1`
+- `functional_windows_logging_success.ps1`
+- `functional_windows_release_package.ps1`
+- `windows_smoke.ps1`
+  - Windows 快速烟测脚本，用于复用现有 build 输出做最小链路验证

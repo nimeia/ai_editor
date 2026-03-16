@@ -3,6 +3,8 @@
 #include "bridge/core/file_service.hpp"
 #include "bridge/core/patch_service.hpp"
 #include "bridge/core/search_service.hpp"
+#include "bridge/core/session_service.hpp"
+#include "bridge/core/structure_adapters.hpp"
 #include <cctype>
 #include <sstream>
 #include <vector>
@@ -86,6 +88,21 @@ PatchBase extract_patch_base(const std::string& request_json) {
   base.mtime = json_get_string(request_json, "base_mtime");
   base.hash = json_get_string(request_json, "base_hash");
   return base;
+}
+
+
+Selector extract_selector(const std::string& request_json) {
+  Selector selector;
+  selector.query = json_get_string(request_json, "selector_query");
+  if (selector.query.empty()) selector.query = json_get_string(request_json, "query");
+  selector.exact_path = json_get_string(request_json, "selector_exact_path");
+  selector.directory_prefix = json_get_string(request_json, "selector_directory_prefix");
+  selector.extension = json_get_string(request_json, "selector_extension");
+  selector.anchor_before = json_get_string(request_json, "anchor_before");
+  selector.anchor_after = json_get_string(request_json, "anchor_after");
+  selector.occurrence = json_get_size_t(request_json, "occurrence", 1);
+  selector.from_end = json_get_bool(request_json, "from_end", false);
+  return selector;
 }
 
 std::string format_fs_list(const FsListResult& res) {
@@ -173,13 +190,57 @@ std::string format_fs_mkdir(const FsMkdirResult& res) {
   return oss.str();
 }
 
+std::string format_fs_move(const FsMoveResult& res) {
+  std::ostringstream oss;
+  oss << "{";
+  oss << "\"path\":\"" << json_escape(res.path) << "\",";
+  oss << "\"target_path\":\"" << json_escape(res.target_path) << "\",";
+  oss << "\"moved\":" << (res.moved ? "true" : "false") << ",";
+  oss << "\"parent_created\":" << (res.parent_created ? "true" : "false") << ",";
+  oss << "\"overwritten\":" << (res.overwritten ? "true" : "false") << ",";
+  oss << "\"policy\":\"" << json_escape(to_string(res.policy)) << "\"";
+  oss << "}";
+  return oss.str();
+}
+
+std::string format_fs_copy(const FsCopyResult& res) {
+  std::ostringstream oss;
+  oss << "{";
+  oss << "\"path\":\"" << json_escape(res.path) << "\",";
+  oss << "\"target_path\":\"" << json_escape(res.target_path) << "\",";
+  oss << "\"copied\":" << (res.copied ? "true" : "false") << ",";
+  oss << "\"parent_created\":" << (res.parent_created ? "true" : "false") << ",";
+  oss << "\"overwritten\":" << (res.overwritten ? "true" : "false") << ",";
+  oss << "\"policy\":\"" << json_escape(to_string(res.policy)) << "\"";
+  oss << "}";
+  return oss.str();
+}
+
+std::string format_fs_rename(const FsRenameResult& res) {
+  std::ostringstream oss;
+  oss << "{";
+  oss << "\"path\":\"" << json_escape(res.path) << "\",";
+  oss << "\"target_path\":\"" << json_escape(res.target_path) << "\",";
+  oss << "\"renamed\":" << (res.renamed ? "true" : "false") << ",";
+  oss << "\"overwritten\":" << (res.overwritten ? "true" : "false") << ",";
+  oss << "\"policy\":\"" << json_escape(to_string(res.policy)) << "\"";
+  oss << "}";
+  return oss.str();
+}
+
 std::string format_search_match(const SearchMatch& m) {
   std::ostringstream oss;
   oss << "{";
+  oss << "\"match_id\":\"" << json_escape(m.match_id) << "\",";
   oss << "\"path\":\"" << json_escape(m.path) << "\",";
   oss << "\"line_start\":" << m.line_start << ",";
   oss << "\"line_end\":" << m.line_end << ",";
-  oss << "\"snippet\":\"" << json_escape(m.snippet) << "\"";
+  oss << "\"snippet\":\"" << json_escape(m.snippet) << "\",";
+  oss << "\"anchor\":\"" << json_escape(m.anchor) << "\",";
+  oss << "\"selector_reason\":\"" << json_escape(m.selector_reason) << "\",";
+  oss << "\"confidence\":" << m.confidence << ",";
+  oss << "\"scope_path\":\"" << json_escape(m.scope_path) << "\",";
+  oss << "\"block_type\":\"" << json_escape(m.block_type) << "\"";
   oss << "}";
   return oss.str();
 }
@@ -228,14 +289,8 @@ std::string format_search_result(const SearchResult& res) {
   oss << "{";
   oss << "\"matches\":[";
   for (std::size_t i = 0; i < res.matches.size(); ++i) {
-    const auto& m = res.matches[i];
     if (i) oss << ",";
-    oss << "{";
-    oss << "\"path\":\"" << json_escape(m.path) << "\",";
-    oss << "\"line_start\":" << m.line_start << ",";
-    oss << "\"line_end\":" << m.line_end << ",";
-    oss << "\"snippet\":\"" << json_escape(m.snippet) << "\"";
-    oss << "}";
+    oss << format_search_match(res.matches[i]);
   }
   oss << "],";
   oss << "\"scanned_files\":" << res.scanned_files << ",";
@@ -247,7 +302,8 @@ std::string format_search_result(const SearchResult& res) {
   }
   oss << "],";
   oss << "\"truncated\":" << (res.truncated ? "true" : "false") << ",";
-  oss << "\"timed_out\":" << (res.timed_out ? "true" : "false");
+  oss << "\"timed_out\":" << (res.timed_out ? "true" : "false") << ",";
+  oss << "\"cancelled\":" << (res.cancelled ? "true" : "false");
   oss << "}";
   return oss.str();
 }
@@ -299,6 +355,245 @@ std::string format_patch_rollback(const PatchRollbackResult& res) {
   oss << "\"backup_id\":\"" << json_escape(res.backup_id) << "\",";
   oss << "\"current_mtime\":\"" << json_escape(res.current_mtime) << "\",";
   oss << "\"current_hash\":\"" << json_escape(res.current_hash) << "\"";
+  oss << "}";
+  return oss.str();
+}
+
+
+std::string format_string_array(const std::vector<std::string>& values) {
+  std::ostringstream oss;
+  oss << "[";
+  for (std::size_t i = 0; i < values.size(); ++i) {
+    if (i) oss << ",";
+    oss << "\"" << json_escape(values[i]) << "\"";
+  }
+  oss << "]";
+  return oss.str();
+}
+
+std::string format_risk(const RiskHint& risk) {
+  std::ostringstream oss;
+  oss << "{";
+  oss << "\"level\":\"" << json_escape(risk.level) << "\",";
+  oss << "\"reasons\":" << format_string_array(risk.reasons);
+  oss << "}";
+  return oss.str();
+}
+
+std::string format_session_mutation(const SessionMutationResult& res) {
+  std::ostringstream oss;
+  oss << "{";
+  oss << "\"session_id\":\"" << json_escape(res.session_id) << "\",";
+  oss << "\"state\":\"" << json_escape(res.state) << "\",";
+  oss << "\"change_id\":\"" << json_escape(res.change_id) << "\",";
+  oss << "\"path\":\"" << json_escape(res.path) << "\",";
+  oss << "\"staged_change_count\":" << res.staged_change_count << ",";
+  oss << "\"selector_reason\":\"" << json_escape(res.selector_reason) << "\",";
+  oss << "\"anchor\":\"" << json_escape(res.anchor) << "\",";
+  oss << "\"risk\":" << format_risk(res.risk);
+  oss << "}";
+  return oss.str();
+}
+
+std::string format_session_inspect(const SessionInspectResult& res) {
+  std::ostringstream oss;
+  oss << "{";
+  oss << "\"session_id\":\"" << json_escape(res.session_id) << "\",";
+  oss << "\"state\":\"" << json_escape(res.state) << "\",";
+  oss << "\"staged_change_count\":" << res.staged_change_count << ",";
+  oss << "\"staged_file_count\":" << res.staged_file_count << ",";
+  oss << "\"staged_block_count\":" << res.staged_block_count << ",";
+  oss << "\"high_risk_change_count\":" << res.high_risk_change_count << ",";
+  oss << "\"medium_risk_change_count\":" << res.medium_risk_change_count << ",";
+  oss << "\"high_risk_file_count\":" << res.high_risk_file_count << ",";
+  oss << "\"medium_risk_file_count\":" << res.medium_risk_file_count << ",";
+  oss << "\"risk_level\":\"" << json_escape(res.risk_level) << "\",";
+  oss << "\"summary\":\"" << json_escape(res.summary) << "\",";
+  oss << "\"items\":[";
+  for (std::size_t i = 0; i < res.items.size(); ++i) {
+    const auto& item = res.items[i];
+    if (i) oss << ",";
+    oss << "{";
+    oss << "\"change_id\":\"" << json_escape(item.change_id) << "\",";
+    oss << "\"operation\":\"" << json_escape(item.operation) << "\",";
+    oss << "\"path\":\"" << json_escape(item.path) << "\",";
+    oss << "\"line_start\":" << item.line_start << ",";
+    oss << "\"line_end\":" << item.line_end << ",";
+    oss << "\"selector_reason\":\"" << json_escape(item.selector_reason) << "\",";
+    oss << "\"anchor\":\"" << json_escape(item.anchor) << "\",";
+    oss << "\"risk_level\":\"" << json_escape(item.risk_level) << "\"";
+    oss << "}";
+  }
+  oss << "],";
+  oss << "\"files\":[";
+  for (std::size_t i = 0; i < res.files.size(); ++i) {
+    const auto& file = res.files[i];
+    if (i) oss << ",";
+    oss << "{";
+    oss << "\"path\":\"" << json_escape(file.path) << "\",";
+    oss << "\"change_count\":" << file.change_count << ",";
+    oss << "\"first_line\":" << file.first_line << ",";
+    oss << "\"last_line\":" << file.last_line << ",";
+    oss << "\"risk_level\":\"" << json_escape(file.risk_level) << "\",";
+    oss << "\"risk_reasons\":" << format_string_array(file.risk_reasons) << ",";
+    oss << "\"anchors\":" << format_string_array(file.anchors) << ",";
+    oss << "\"selector_reasons\":" << format_string_array(file.selector_reasons) << ",";
+    oss << "\"summary\":\"" << json_escape(file.summary) << "\"";
+    oss << "}";
+  }
+  oss << "],";
+  oss << "\"highlights\":" << format_string_array(res.highlights) << ",";
+  oss << "\"risk_reasons\":" << format_string_array(res.risk_reasons);
+  oss << "}";
+  return oss.str();
+}
+
+std::string format_session_preview(const SessionPreviewResult& res) {
+  std::ostringstream oss;
+  oss << "{";
+  oss << "\"session_id\":\"" << json_escape(res.session_id) << "\",";
+  oss << "\"state\":\"" << json_escape(res.state) << "\",";
+  oss << "\"staged_change_count\":" << res.staged_change_count << ",";
+  oss << "\"previewed_file_count\":" << res.previewed_file_count << ",";
+  oss << "\"total_hunk_count\":" << res.total_hunk_count << ",";
+  oss << "\"total_added_line_count\":" << res.total_added_line_count << ",";
+  oss << "\"total_removed_line_count\":" << res.total_removed_line_count << ",";
+  oss << "\"high_risk_file_count\":" << res.high_risk_file_count << ",";
+  oss << "\"medium_risk_file_count\":" << res.medium_risk_file_count << ",";
+  oss << "\"risk_level\":\"" << json_escape(res.risk_level) << "\",";
+  oss << "\"summary\":\"" << json_escape(res.summary) << "\",";
+  oss << "\"files\":[";
+  for (std::size_t i = 0; i < res.files.size(); ++i) {
+    const auto& file = res.files[i];
+    if (i) oss << ",";
+    oss << "{";
+    oss << "\"path\":\"" << json_escape(file.path) << "\",";
+    oss << "\"preview_id\":\"" << json_escape(file.preview_id) << "\",";
+    oss << "\"diff\":\"" << json_escape(file.diff) << "\",";
+    oss << "\"selector_summary\":\"" << json_escape(file.selector_summary) << "\",";
+    oss << "\"risk_level\":\"" << json_escape(file.risk_level) << "\",";
+    oss << "\"change_count\":" << file.change_count << ",";
+    oss << "\"hunk_count\":" << file.hunk_count << ",";
+    oss << "\"added_line_count\":" << file.added_line_count << ",";
+    oss << "\"removed_line_count\":" << file.removed_line_count << ",";
+    oss << "\"first_line\":" << file.first_line << ",";
+    oss << "\"last_line\":" << file.last_line << ",";
+    oss << "\"risk_reasons\":" << format_string_array(file.risk_reasons) << ",";
+    oss << "\"summary\":\"" << json_escape(file.summary) << "\",";
+    oss << "\"applicable\":" << (file.applicable ? "true" : "false");
+    oss << "}";
+  }
+  oss << "],";
+  oss << "\"highlights\":" << format_string_array(res.highlights) << ",";
+  oss << "\"risk_reasons\":" << format_string_array(res.risk_reasons);
+  oss << "}";
+  return oss.str();
+}
+
+std::string format_session_commit(const SessionCommitResult& res) {
+  std::ostringstream oss;
+  oss << "{";
+  oss << "\"session_id\":\"" << json_escape(res.session_id) << "\",";
+  oss << "\"state\":\"" << json_escape(res.state) << "\",";
+  oss << "\"commit_id\":\"" << json_escape(res.commit_id) << "\",";
+  oss << "\"committed_file_count\":" << res.committed_file_count << ",";
+  oss << "\"files\":[";
+  for (std::size_t i = 0; i < res.files.size(); ++i) {
+    const auto& file = res.files[i];
+    if (i) oss << ",";
+    oss << "{";
+    oss << "\"path\":\"" << json_escape(file.path) << "\",";
+    oss << "\"preview_id\":\"" << json_escape(file.preview_id) << "\",";
+    oss << "\"backup_id\":\"" << json_escape(file.backup_id) << "\",";
+    oss << "\"current_hash\":\"" << json_escape(file.current_hash) << "\"";
+    oss << "}";
+  }
+  oss << "]}";
+  return oss.str();
+}
+
+std::string format_session_begin(const SessionBeginResult& res) {
+  std::ostringstream oss;
+  oss << "{";
+  oss << "\"session_id\":\"" << json_escape(res.session_id) << "\",";
+  oss << "\"state\":\"" << json_escape(res.state) << "\",";
+  oss << "\"created_at\":\"" << json_escape(res.created_at) << "\"";
+  oss << "}";
+  return oss.str();
+}
+
+std::string format_session_abort(const SessionAbortResult& res) {
+  std::ostringstream oss;
+  oss << "{";
+  oss << "\"session_id\":\"" << json_escape(res.session_id) << "\",";
+  oss << "\"state\":\"" << json_escape(res.state) << "\",";
+  oss << "\"aborted\":" << (res.aborted ? "true" : "false");
+  oss << "}";
+  return oss.str();
+}
+
+std::string format_session_recover(const SessionRecoverResult& res) {
+  std::ostringstream oss;
+  oss << "{";
+  oss << "\"session_id\":\"" << json_escape(res.session_id) << "\",";
+  oss << "\"state\":\"" << json_escape(res.state) << "\",";
+  oss << "\"recoverable\":" << (res.recoverable ? "true" : "false") << ",";
+  oss << "\"staged_change_count\":" << res.staged_change_count << ",";
+  oss << "\"conflict_file_count\":" << res.conflict_file_count << ",";
+  oss << "\"rebase_file_count\":" << res.rebase_file_count;
+  oss << "}";
+  return oss.str();
+}
+
+std::string format_recovery_file(const RecoveryCheckFile& file) {
+  std::ostringstream oss;
+  oss << "{";
+  oss << "\"path\":\"" << json_escape(file.path) << "\",";
+  oss << "\"status\":\"" << json_escape(file.status) << "\",";
+  oss << "\"recoverable\":" << (file.recoverable ? "true" : "false") << ",";
+  oss << "\"rebase_required\":" << (file.rebase_required ? "true" : "false") << ",";
+  oss << "\"conflict_reason\":\"" << json_escape(file.conflict_reason) << "\",";
+  oss << "\"base_hash\":\"" << json_escape(file.base_hash) << "\",";
+  oss << "\"current_hash\":\"" << json_escape(file.current_hash) << "\"";
+  oss << "}";
+  return oss.str();
+}
+
+std::string format_recovery_check(const RecoveryCheckResult& res) {
+  std::ostringstream oss;
+  oss << "{";
+  oss << "\"session_id\":\"" << json_escape(res.session_id) << "\",";
+  oss << "\"state\":\"" << json_escape(res.state) << "\",";
+  oss << "\"recoverable\":" << (res.recoverable ? "true" : "false") << ",";
+  oss << "\"staged_change_count\":" << res.staged_change_count << ",";
+  oss << "\"file_count\":" << res.file_count << ",";
+  oss << "\"conflict_file_count\":" << res.conflict_file_count << ",";
+  oss << "\"rebase_file_count\":" << res.rebase_file_count << ",";
+  oss << "\"files\":[";
+  for (std::size_t i = 0; i < res.files.size(); ++i) { if (i) oss << ","; oss << format_recovery_file(res.files[i]); }
+  oss << "]}";
+  return oss.str();
+}
+
+std::string format_recovery_rebase(const RecoveryRebaseResult& res) {
+  std::ostringstream oss;
+  oss << "{";
+  oss << "\"session_id\":\"" << json_escape(res.session_id) << "\",";
+  oss << "\"state\":\"" << json_escape(res.state) << "\",";
+  oss << "\"recoverable\":" << (res.recoverable ? "true" : "false") << ",";
+  oss << "\"rebased_file_count\":" << res.rebased_file_count << ",";
+  oss << "\"files\":[";
+  for (std::size_t i = 0; i < res.files.size(); ++i) { if (i) oss << ","; oss << format_recovery_file(res.files[i]); }
+  oss << "]}";
+  return oss.str();
+}
+
+std::string format_session_snapshot(const SessionSnapshotResult& res) {
+  std::ostringstream oss;
+  oss << "{";
+  oss << "\"session_id\":\"" << json_escape(res.session_id) << "\",";
+  oss << "\"state\":\"" << json_escape(res.state) << "\",";
+  oss << "\"snapshot_path\":\"" << json_escape(res.snapshot_path) << "\"";
   oss << "}";
   return oss.str();
 }
@@ -536,14 +831,42 @@ std::string handle_request(const std::string& request_json,
     if (!result.ok) { const auto err = classify_common_error(result.error, "FS_MKDIR_FAILED"); return make_error_response(request_id, err.code, err.message); }
     return make_ok_response(request_id, format_fs_mkdir(result));
   }
+  if (method == "fs.move") {
+    FsMoveOptions options;
+    options.create_parents = json_get_bool(request_json, "create_parents", true);
+    options.overwrite = json_get_bool(request_json, "overwrite", false);
+    const auto result = fs_move(workspace, json_get_string(request_json, "path"), json_get_string(request_json, "target_path"), options);
+    if (!result.ok) { const auto err = classify_common_error(result.error, "FS_MOVE_FAILED"); return make_error_response(request_id, err.code, err.message); }
+    return make_ok_response(request_id, format_fs_move(result));
+  }
+  if (method == "fs.copy") {
+    FsCopyOptions options;
+    options.create_parents = json_get_bool(request_json, "create_parents", true);
+    options.overwrite = json_get_bool(request_json, "overwrite", false);
+    options.recursive = json_get_bool(request_json, "recursive", false);
+    const auto result = fs_copy(workspace, json_get_string(request_json, "path"), json_get_string(request_json, "target_path"), options);
+    if (!result.ok) { const auto err = classify_common_error(result.error, "FS_COPY_FAILED"); return make_error_response(request_id, err.code, err.message); }
+    return make_ok_response(request_id, format_fs_copy(result));
+  }
+  if (method == "fs.rename") {
+    FsRenameOptions options;
+    options.overwrite = json_get_bool(request_json, "overwrite", false);
+    const auto result = fs_rename(workspace, json_get_string(request_json, "path"), json_get_string(request_json, "target_path"), options);
+    if (!result.ok) { const auto err = classify_common_error(result.error, "FS_RENAME_FAILED"); return make_error_response(request_id, err.code, err.message); }
+    return make_ok_response(request_id, format_fs_rename(result));
+  }
   if (method == "search.text" || method == "search.regex") {
     SearchOptions options;
     options.root_path = json_get_string(request_json, "path");
     if (options.root_path.empty()) options.root_path = ".";
+    options.exact_path = json_get_string(request_json, "exact_path");
+    options.directory_prefix = json_get_string(request_json, "directory_prefix");
     options.include_excluded = json_get_bool(request_json, "include_excluded", false);
     options.extensions = split_csv(json_get_string(request_json, "extensions_csv"));
     options.context_before = json_get_size_t(request_json, "context_before", 2);
     options.context_after = json_get_size_t(request_json, "context_after", 2);
+    options.min_line = json_get_size_t(request_json, "min_line", 0);
+    options.max_line = json_get_size_t(request_json, "max_line", 0);
     options.max_results = json_get_size_t(request_json, "max_results", 100);
     options.max_matches_per_file = json_get_size_t(request_json, "max_matches_per_file", 20);
     options.max_file_bytes = json_get_size_t(request_json, "max_file_bytes", 256 * 1024);
@@ -556,6 +879,218 @@ std::string handle_request(const std::string& request_json,
       return make_error_response(request_id, err.code, err.message);
     }
     return make_ok_response(request_id, format_search_result(result));
+  }
+  if (method == "session.begin") {
+    const auto result = session_begin(workspace, session_id);
+    if (!result.ok) { const auto err = classify_common_error(result.error, "SESSION_BEGIN_FAILED"); return make_error_response(request_id, err.code, err.message); }
+    return make_ok_response(request_id, format_session_begin(result));
+  }
+  if (method == "session.inspect") {
+    const auto result = session_inspect(workspace, session_id);
+    if (!result.ok) { const auto err = classify_common_error(result.error, "SESSION_INSPECT_FAILED"); return make_error_response(request_id, err.code, err.message); }
+    return make_ok_response(request_id, format_session_inspect(result));
+  }
+  if (method == "session.preview") {
+    const auto result = session_preview(workspace, session_id);
+    if (!result.ok) { const auto err = classify_common_error(result.error, "SESSION_PREVIEW_FAILED"); return make_error_response(request_id, err.code, err.message); }
+    return make_ok_response(request_id, format_session_preview(result));
+  }
+  if (method == "session.commit") {
+    const auto result = session_commit(workspace, session_id, client_id, request_id);
+    if (!result.ok) { const auto err = classify_common_error(result.error, "SESSION_COMMIT_FAILED"); return make_error_response(request_id, err.code, err.message); }
+    return make_ok_response(request_id, format_session_commit(result));
+  }
+  if (method == "session.abort") {
+    const auto result = session_abort(workspace, session_id);
+    if (!result.ok) { const auto err = classify_common_error(result.error, "SESSION_ABORT_FAILED"); return make_error_response(request_id, err.code, err.message); }
+    return make_ok_response(request_id, format_session_abort(result));
+  }
+  if (method == "session.drop_change") {
+    const auto result = session_drop_change(workspace, session_id, json_get_string(request_json, "change_id"));
+    if (!result.ok) { const auto err = classify_common_error(result.error, "SESSION_DROP_FAILED"); return make_error_response(request_id, err.code, err.message); }
+    return make_ok_response(request_id, format_session_mutation(result));
+  }
+  if (method == "session.drop_path") {
+    const auto result = session_drop_path(workspace, session_id, json_get_string(request_json, "path"));
+    if (!result.ok) { const auto err = classify_common_error(result.error, "SESSION_DROP_FAILED"); return make_error_response(request_id, err.code, err.message); }
+    return make_ok_response(request_id, format_session_mutation(result));
+  }
+  if (method == "session.recover") {
+    const auto result = session_recover(workspace, session_id);
+    if (!result.ok) { const auto err = classify_common_error(result.error, "SESSION_RECOVER_FAILED"); return make_error_response(request_id, err.code, err.message); }
+    return make_ok_response(request_id, format_session_recover(result));
+  }
+  if (method == "recovery.check") {
+    const auto result = recovery_check(workspace, session_id);
+    if (!result.ok) { const auto err = classify_common_error(result.error, "RECOVERY_CHECK_FAILED"); return make_error_response(request_id, err.code, err.message); }
+    return make_ok_response(request_id, format_recovery_check(result));
+  }
+  if (method == "recovery.rebase") {
+    const auto result = recovery_rebase(workspace, session_id);
+    if (!result.ok) { const auto err = classify_common_error(result.error, "RECOVERY_REBASE_FAILED"); return make_error_response(request_id, err.code, err.message); }
+    return make_ok_response(request_id, format_recovery_rebase(result));
+  }
+  if (method == "session.snapshot") {
+    const auto result = session_snapshot(workspace, session_id);
+    if (!result.ok) { const auto err = classify_common_error(result.error, "SESSION_SNAPSHOT_FAILED"); return make_error_response(request_id, err.code, err.message); }
+    return make_ok_response(request_id, format_session_snapshot(result));
+  }
+  if (method == "session.add" || method == "edit.replace_range") {
+    const auto result = edit_replace_range(workspace,
+                                           session_id,
+                                           json_get_string(request_json, "path"),
+                                           json_get_size_t(request_json, "start_line", json_get_size_t(request_json, "line_start", 1)),
+                                           json_get_size_t(request_json, "end_line", json_get_size_t(request_json, "line_end", 1)),
+                                           json_get_string(request_json, "new_content"));
+    if (!result.ok) { const auto err = classify_common_error(result.error, "EDIT_ADD_FAILED"); return make_error_response(request_id, err.code, err.message); }
+    return make_ok_response(request_id, format_session_mutation(result));
+  }
+  if (method == "edit.replace_block") {
+    const auto result = edit_replace_block(workspace,
+                                           session_id,
+                                           json_get_string(request_json, "path"),
+                                           extract_selector(request_json),
+                                           json_get_string(request_json, "new_content"));
+    if (!result.ok) { const auto err = classify_common_error(result.error, "EDIT_ADD_FAILED"); return make_error_response(request_id, err.code, err.message); }
+    return make_ok_response(request_id, format_session_mutation(result));
+  }
+  if (method == "edit.insert_before") {
+    const auto result = edit_insert_before(workspace,
+                                           session_id,
+                                           json_get_string(request_json, "path"),
+                                           extract_selector(request_json),
+                                           json_get_string(request_json, "new_content"));
+    if (!result.ok) { const auto err = classify_common_error(result.error, "EDIT_ADD_FAILED"); return make_error_response(request_id, err.code, err.message); }
+    return make_ok_response(request_id, format_session_mutation(result));
+  }
+  if (method == "edit.insert_after") {
+    const auto result = edit_insert_after(workspace,
+                                          session_id,
+                                          json_get_string(request_json, "path"),
+                                          extract_selector(request_json),
+                                          json_get_string(request_json, "new_content"));
+    if (!result.ok) { const auto err = classify_common_error(result.error, "EDIT_ADD_FAILED"); return make_error_response(request_id, err.code, err.message); }
+    return make_ok_response(request_id, format_session_mutation(result));
+  }
+  if (method == "edit.delete_block") {
+    const auto result = edit_delete_block(workspace,
+                                          session_id,
+                                          json_get_string(request_json, "path"),
+                                          extract_selector(request_json));
+    if (!result.ok) { const auto err = classify_common_error(result.error, "EDIT_ADD_FAILED"); return make_error_response(request_id, err.code, err.message); }
+    return make_ok_response(request_id, format_session_mutation(result));
+  }
+  if (method == "markdown.replace_section") {
+    const auto result = markdown_replace_section(workspace,
+                                                 session_id,
+                                                 json_get_string(request_json, "path"),
+                                                 json_get_string(request_json, "heading"),
+                                                 json_get_size_t(request_json, "heading_level", 2),
+                                                 json_get_string(request_json, "new_content"));
+    if (!result.ok) { const auto err = classify_common_error(result.error, "STRUCTURE_ADAPTER_FAILED"); return make_error_response(request_id, err.code, err.message); }
+    return make_ok_response(request_id, format_session_mutation(result));
+  }
+  if (method == "markdown.insert_after_heading") {
+    const auto result = markdown_insert_after_heading(workspace,
+                                                      session_id,
+                                                      json_get_string(request_json, "path"),
+                                                      json_get_string(request_json, "heading"),
+                                                      json_get_size_t(request_json, "heading_level", 2),
+                                                      json_get_string(request_json, "new_content"));
+    if (!result.ok) { const auto err = classify_common_error(result.error, "STRUCTURE_ADAPTER_FAILED"); return make_error_response(request_id, err.code, err.message); }
+    return make_ok_response(request_id, format_session_mutation(result));
+  }
+  if (method == "markdown.upsert_section") {
+    const auto result = markdown_upsert_section(workspace,
+                                                session_id,
+                                                json_get_string(request_json, "path"),
+                                                json_get_string(request_json, "heading"),
+                                                json_get_size_t(request_json, "heading_level", 2),
+                                                json_get_string(request_json, "new_content"));
+    if (!result.ok) { const auto err = classify_common_error(result.error, "STRUCTURE_ADAPTER_FAILED"); return make_error_response(request_id, err.code, err.message); }
+    return make_ok_response(request_id, format_session_mutation(result));
+  }
+  if (method == "json.replace_value") {
+    const auto result = json_replace_value(workspace,
+                                           session_id,
+                                           json_get_string(request_json, "path"),
+                                           json_get_string(request_json, "key_path"),
+                                           json_get_string(request_json, "new_content"));
+    if (!result.ok) { const auto err = classify_common_error(result.error, "STRUCTURE_ADAPTER_FAILED"); return make_error_response(request_id, err.code, err.message); }
+    return make_ok_response(request_id, format_session_mutation(result));
+  }
+  if (method == "json.upsert_key") {
+    const auto result = json_upsert_key(workspace,
+                                        session_id,
+                                        json_get_string(request_json, "path"),
+                                        json_get_string(request_json, "key_path"),
+                                        json_get_string(request_json, "new_content"));
+    if (!result.ok) { const auto err = classify_common_error(result.error, "STRUCTURE_ADAPTER_FAILED"); return make_error_response(request_id, err.code, err.message); }
+    return make_ok_response(request_id, format_session_mutation(result));
+  }
+  if (method == "json.append_array_item") {
+    const auto result = json_append_array_item(workspace,
+                                               session_id,
+                                               json_get_string(request_json, "path"),
+                                               json_get_string(request_json, "key_path"),
+                                               json_get_string(request_json, "new_content"));
+    if (!result.ok) { const auto err = classify_common_error(result.error, "STRUCTURE_ADAPTER_FAILED"); return make_error_response(request_id, err.code, err.message); }
+    return make_ok_response(request_id, format_session_mutation(result));
+  }
+  if (method == "yaml.replace_value") {
+    const auto result = yaml_replace_value(workspace,
+                                           session_id,
+                                           json_get_string(request_json, "path"),
+                                           json_get_string(request_json, "key_path"),
+                                           json_get_string(request_json, "new_content"));
+    if (!result.ok) { const auto err = classify_common_error(result.error, "STRUCTURE_ADAPTER_FAILED"); return make_error_response(request_id, err.code, err.message); }
+    return make_ok_response(request_id, format_session_mutation(result));
+  }
+  if (method == "yaml.upsert_key") {
+    const auto result = yaml_upsert_key(workspace,
+                                        session_id,
+                                        json_get_string(request_json, "path"),
+                                        json_get_string(request_json, "key_path"),
+                                        json_get_string(request_json, "new_content"));
+    if (!result.ok) { const auto err = classify_common_error(result.error, "STRUCTURE_ADAPTER_FAILED"); return make_error_response(request_id, err.code, err.message); }
+    return make_ok_response(request_id, format_session_mutation(result));
+  }
+  if (method == "yaml.append_item") {
+    const auto result = yaml_append_item(workspace,
+                                         session_id,
+                                         json_get_string(request_json, "path"),
+                                         json_get_string(request_json, "key_path"),
+                                         json_get_string(request_json, "new_content"));
+    if (!result.ok) { const auto err = classify_common_error(result.error, "STRUCTURE_ADAPTER_FAILED"); return make_error_response(request_id, err.code, err.message); }
+    return make_ok_response(request_id, format_session_mutation(result));
+  }
+  if (method == "html.replace_node") {
+    const auto result = html_replace_node(workspace,
+                                          session_id,
+                                          json_get_string(request_json, "path"),
+                                          json_get_string(request_json, "selector_query"),
+                                          json_get_string(request_json, "new_content"));
+    if (!result.ok) { const auto err = classify_common_error(result.error, "STRUCTURE_ADAPTER_FAILED"); return make_error_response(request_id, err.code, err.message); }
+    return make_ok_response(request_id, format_session_mutation(result));
+  }
+  if (method == "html.insert_after_node") {
+    const auto result = html_insert_after_node(workspace,
+                                               session_id,
+                                               json_get_string(request_json, "path"),
+                                               json_get_string(request_json, "selector_query"),
+                                               json_get_string(request_json, "new_content"));
+    if (!result.ok) { const auto err = classify_common_error(result.error, "STRUCTURE_ADAPTER_FAILED"); return make_error_response(request_id, err.code, err.message); }
+    return make_ok_response(request_id, format_session_mutation(result));
+  }
+  if (method == "html.set_attribute") {
+    const auto result = html_set_attribute(workspace,
+                                           session_id,
+                                           json_get_string(request_json, "path"),
+                                           json_get_string(request_json, "selector_query"),
+                                           json_get_string(request_json, "attribute_name"),
+                                           json_get_string(request_json, "attribute_value"));
+    if (!result.ok) { const auto err = classify_common_error(result.error, "STRUCTURE_ADAPTER_FAILED"); return make_error_response(request_id, err.code, err.message); }
+    return make_ok_response(request_id, format_session_mutation(result));
   }
   if (method == "patch.preview") {
     const auto result = patch_preview(workspace, json_get_string(request_json, "path"), json_get_string(request_json, "new_content"), extract_patch_base(request_json));
@@ -613,10 +1148,14 @@ void handle_request_stream(const std::string& request_json,
     SearchOptions options;
     options.root_path = json_get_string(request_json, "path");
     if (options.root_path.empty()) options.root_path = ".";
+    options.exact_path = json_get_string(request_json, "exact_path");
+    options.directory_prefix = json_get_string(request_json, "directory_prefix");
     options.include_excluded = json_get_bool(request_json, "include_excluded", false);
     options.extensions = split_csv(json_get_string(request_json, "extensions_csv"));
     options.context_before = json_get_size_t(request_json, "context_before", 2);
     options.context_after = json_get_size_t(request_json, "context_after", 2);
+    options.min_line = json_get_size_t(request_json, "min_line", 0);
+    options.max_line = json_get_size_t(request_json, "max_line", 0);
     options.max_results = json_get_size_t(request_json, "max_results", 100);
     options.max_matches_per_file = json_get_size_t(request_json, "max_matches_per_file", 20);
     options.max_file_bytes = json_get_size_t(request_json, "max_file_bytes", 256 * 1024);

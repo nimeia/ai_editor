@@ -9,18 +9,28 @@
 namespace bridge::core {
 
 struct SearchMatch {
+  std::string match_id;
   std::string path;
   std::size_t line_start = 0;
   std::size_t line_end = 0;
   std::string snippet;
+  std::string anchor;
+  std::string selector_reason;
+  double confidence = 0.0;
+  std::string scope_path;
+  std::string block_type = "line";
 };
 
 struct SearchOptions {
   std::string root_path = ".";
+  std::string exact_path;
+  std::string directory_prefix;
   bool include_excluded = false;
   std::vector<std::string> extensions;
   std::size_t context_before = 2;
   std::size_t context_after = 2;
+  std::size_t min_line = 0;
+  std::size_t max_line = 0;
   std::size_t max_results = 100;
   std::size_t max_matches_per_file = 20;
   std::size_t max_file_bytes = 256 * 1024;

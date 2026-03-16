@@ -1,0 +1,21 @@
+{
+  "name": "session-multifile",
+  "steps": [
+    {
+      "command": ["session-begin", "--workspace", "${workspace}", "--session-id", "bench-multi", "--json"],
+      "expect_json": {"result.state": "created"}
+    },
+    {
+      "command": ["edit-replace-range", "--workspace", "${workspace}", "--session-id", "bench-multi", "--path", "docs/a.txt", "--start", "1", "--end", "1", "--content-file", "${line_a}", "--json"],
+      "expect_json": {"result.path": "docs/a.txt"}
+    },
+    {
+      "command": ["edit-replace-range", "--workspace", "${workspace}", "--session-id", "bench-multi", "--path", "docs/b.txt", "--start", "1", "--end", "1", "--content-file", "${line_b}", "--json"],
+      "expect_json": {"result.path": "docs/b.txt"}
+    },
+    {
+      "command": ["session-inspect", "--workspace", "${workspace}", "--session-id", "bench-multi", "--json"],
+      "expect_json": {"result.staged_file_count": "2", "result.risk_level": "medium"}
+    }
+  ]
+}

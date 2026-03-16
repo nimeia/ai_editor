@@ -1,0 +1,26 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+const { BridgeCliBridge, renderPreviewHtml } = require('../../extensions/vscode-bridge/lib/bridge_client.js');
+function assert(condition, message) { if (!condition) throw new Error(message); }
+const [cli, workspace] = process.argv.slice(2);
+const packageJson = JSON.parse(fs.readFileSync(path.resolve('extensions/vscode-bridge/package.json'), 'utf8'));
+assert(packageJson.contributes.commands.some((item) => item.command === 'bridgeAi.previewSession'), 'preview command missing');
+assert(packageJson.contributes.views.explorer.some((item) => item.id === 'bridgeAi.stagedChanges'), 'staged changes view missing');
+const tempFile = path.join(os.tmpdir(), `bridge_vscode_smoke_${Date.now()}.txt`);
+fs.writeFileSync(tempFile, 'UPDATED', 'utf8');
+const bridge = new BridgeCliBridge(cli, workspace, { sessionId: 'vscode-smoke', clientId: 'vscode-smoke' });
+await bridge.sessionBegin();
+const staged = await bridge.editReplaceRange('docs/note.txt', 2, 2, tempFile);
+assert(staged.path === 'docs/note.txt', 'stage replace range failed');
+const inspect = await bridge.sessionInspect();
+assert(inspect.staged_change_count === 1, 'inspect should show staged change');
+const preview = await bridge.sessionPreview();
+assert(preview.previewed_file_count === 1, 'preview should show one file');
+assert(renderPreviewHtml(preview).includes('AI Bridge Session Preview'), 'preview html missing title');
+await bridge.sessionDropChange(staged.change_id);
+const afterDrop = await bridge.sessionInspect();
+assert(afterDrop.staged_change_count === 0, 'drop change should clear session');
+console.log('vscode extension smoke ok');

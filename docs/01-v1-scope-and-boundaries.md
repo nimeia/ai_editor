@@ -29,6 +29,7 @@
 - workspace containment
 - `deny / skip_by_default / normal`
 - `fs.list / fs.stat / fs.read / fs.read_range`
+- `fs.write / fs.mkdir / fs.move / fs.copy / fs.rename`
 - `search.text / search.regex`
 - `patch.preview / patch.apply / patch.rollback / history.list`
 - `request.cancel`
@@ -43,6 +44,7 @@
 - CLI 人类可读输出 + `--json`
 - 流式响应基线
 - timeout / cancel 基线
+- install / package / GitHub Actions 发布基线
 
 ### 已实现的流式覆盖
 
@@ -62,5 +64,4 @@
 
 ## 当前剩余收口点
 
-- P5：发布工程化基线
-- P6：Linux + Windows 全量验证与最终发布检查
+- P6：Windows 原生环境最终复跑与发布签收

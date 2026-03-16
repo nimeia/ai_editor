@@ -72,3 +72,11 @@
 - `fs.write` 的 overwrite 策略在 CLI 层开放
 - patch diff 从“单 hunk 收窄”进一步演进到“多 hunk”
 - patch / write 的错误码再做更细分层
+
+
+## Round 2 completed
+
+- Added formal `fs.move`, `fs.copy`, and `fs.rename` operations.
+- Added CLI commands: `move`, `copy`, `rename`.
+- Added protocol result payloads and error-code normalization for new file operations.
+- Added POSIX functional coverage and updated Windows CLI contract script.

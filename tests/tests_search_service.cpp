@@ -25,6 +25,10 @@ int main() {
   assert(text.ok);
   assert(text.matches.size() == 2);
   assert(text.scanned_files >= 2);
+  assert(!text.matches[0].match_id.empty());
+  assert(!text.matches[0].anchor.empty());
+  assert(text.matches[0].selector_reason == "literal-query");
+  assert(text.matches[0].confidence > 0.0);
 
   auto regex = bridge::core::search_regex(cfg, "main\\s*\\(", opts);
   assert(regex.ok);
@@ -42,6 +46,18 @@ int main() {
     if (m.path == "node_modules/pkg/index.js") saw_excluded = true;
   }
   assert(saw_excluded);
+
+
+  bridge::core::SearchOptions filtered_opts;
+  filtered_opts.root_path = ".";
+  filtered_opts.exact_path = "docs/readme.md";
+  filtered_opts.min_line = 2;
+  filtered_opts.max_line = 2;
+  auto filtered = bridge::core::search_text(cfg, "token", filtered_opts);
+  assert(filtered.ok);
+  assert(filtered.matches.size() == 1);
+  assert(filtered.matches[0].path == "docs/readme.md");
+  assert(filtered.matches[0].line_start == 2);
 
   bool cancelled = false;
   bridge::core::SearchOptions cancel_opts;

@@ -1,66 +1,68 @@
-# V1 鏈€缁堝彂甯冩鏌ユ竻鍗?
+# V1 最终发布检查清单
 
-## 1. 婧愮爜涓庢枃妗?
+## 1. 版本与文档
 
-- [ ] 鐗堟湰鍙风‘璁ゆ棤璇?
-- [ ] `README.md` 涓庡綋鍓嶅疄鐜颁竴鑷?
-- [ ] `docs/04-v1-protocol.md` 涓庡綋鍓嶆柟娉?閿欒鐮佷竴鑷?
-- [ ] `docs/07-v1-build-run-test-guide.md` 鍙洿鎺ユ寚瀵兼瀯寤轰笌楠岃瘉
-- [ ] `docs/08-v1-release-and-deployment.md` 鍙洿鎺ユ寚瀵兼墦鍖呬笌閮ㄧ讲
-- [ ] `docs/09-v1-validation-report.md` 宸叉洿鏂颁负鏈鍊欓€夌増鏈殑瀹為檯缁撴灉
+- [ ] 版本号确认无误
+- [ ] `README.md` 与当前代码状态一致
+- [ ] `docs/04-v1-protocol.md` 已覆盖当前实际协议方法
+- [ ] `docs/07-v1-build-run-test-guide.md` 可直接指导构建与验证
+- [ ] `docs/08-v1-release-and-deployment.md` 可直接指导打包与部署
+- [ ] `docs/09-v1-validation-report.md` 已更新为本次候选版本的实际结果
+- [ ] `docs/10-v1-release-checklist.md` 本身未过期
 
-## 2. Linux / POSIX 楠岃瘉
+## 2. Linux / POSIX 验证
 
 - [ ] `cmake -S . -B build -DCMAKE_BUILD_TYPE=Release`
-- [ ] `cmake --build build --parallel 1` 鎴栧叾浠栫‘璁ょǔ瀹氱殑骞惰搴?
+- [ ] `cmake --build build --parallel 1`
 - [ ] `ctest --test-dir build --output-on-failure`
-- [ ] `./scripts/validate_v1.sh --build-dir build --jobs 1`
-- [ ] 鎵嬪伐鏌ョ湅 `.bridge/audit.log` 涓?`.bridge/history.log`
+- [ ] `./scripts/validate_v1.sh --build-dir build --config Release --jobs 1`
+- [ ] POSIX runtime / audit / history / preview / backup 链路验证通过
+- [ ] POSIX install tree 检查通过
+- [ ] POSIX package 归档与 checksum 生成通过
 
-## 3. Windows 楠岃瘉
+## 3. Windows 验证
 
-- [ ] `cmake -S . -B build -G "Visual Studio 17 2022" -A x64`
-- [ ] `cmake --build build --config Release --parallel 1` 鎴栧叾浠栫‘璁ょǔ瀹氱殑骞惰搴?
+- [ ] `cmake -S . -B build`
+- [ ] `cmake --build build --config Release`
 - [ ] `ctest --test-dir build -C Release --output-on-failure`
 - [ ] `pwsh ./scripts/windows_smoke.ps1 -BuildDir ./build -Config Release`
 - [ ] `pwsh ./scripts/validate_v1.ps1 -BuildDir build -Config Release -Jobs 1`
-- [ ] 妫€鏌?`.p6_validation_summary/windows_validation_summary.json` 涓墍鏈夐樁娈?`ok=true`
-- [ ] 妫€鏌?`.p6_validation_summary/windows_validation_summary.md` 涓?install checks / artifacts 鎽樿
+- [ ] 检查 `.p6_validation_summary/windows_validation_summary.json` 中所有阶段 `ok=true`
+- [ ] 检查 `.p6_validation_summary/windows_validation_summary.md` 中 install checks / artifacts 摘要
+- [ ] Unicode / 空格路径 / backslash path normalization 验证通过
 
-## 4. 瀹夎涓庡綊妗?
+## 4. 文本编辑与协议能力
 
-- [ ] `cmake --install build --prefix install-root`
-- [ ] 瀹夎鏍戝唴瀛樺湪 `bin/bridge_daemon` 涓?`bin/bridge_cli`
-- [ ] 瀹夎鏍戝唴瀛樺湪 `share/ai_bridge/docs/*`
-- [ ] POSIX 褰掓。锛歚./scripts/package_release.sh --build-dir build --out-dir dist --generator TGZ --jobs 1`
-- [ ] Windows 褰掓。锛歚pwsh ./scripts/package_release.ps1 -BuildDir build -Config Release -OutDir dist -Generator ZIP -Jobs 1`
-- [ ] 鏈湴鎵撳寘杈撳嚭宸茬敓鎴?`SHA256SUMS.txt` 骞舵牎楠?
-- [ ] GitHub Release 璧勪骇涓殑骞冲彴鏍￠獙鏂囦欢鍚嶆棤鍐茬獊锛堝 `SHA256SUMS-linux.txt` / `SHA256SUMS-windows.txt`锛?
+- [ ] `fs.write` / `fs.mkdir` 行为与 CLI 参数一致
+- [ ] `fs.move` / `fs.copy` / `fs.rename` 行为、覆盖策略与路径限制符合预期
+- [ ] `search.text` / `search.regex` 验证通过
+- [ ] `request.cancel` / `timeout_ms` / stream final summary 验证通过
+- [ ] `patch.preview` / `patch.apply` / `patch.rollback` / `history.list` 验证通过
 
-## 5. 鏍稿績閾捐矾鎶芥煡
+## 5. 打包与发布链路
 
-- [ ] `ping`
-- [ ] `info`
-- [ ] `open`
-- [ ] `list`
-- [ ] `stat`
-- [ ] `read`
-- [ ] `read-range`
-- [ ] `search-text`
-- [ ] `search-regex`
-- [ ] `read --stream`
-- [ ] `patch-preview`
-- [ ] `patch-apply`
-- [ ] `history`
-- [ ] `patch-rollback`
-- [ ] `cancel`
-- [ ] `timeout`
+- [ ] POSIX 归档：`./scripts/package_release.sh --build-dir build --out-dir dist --generator TGZ --jobs 1`
+- [ ] Windows 归档：`pwsh ./scripts/package_release.ps1 -BuildDir build -Config Release -OutDir dist -Generator ZIP -Jobs 1`
+- [ ] 本地打包输出已生成 `SHA256SUMS.txt` 并校验
+- [ ] GitHub Release 资产中的平台校验文件名无冲突（如 `SHA256SUMS-linux.txt` / `SHA256SUMS-windows.txt`）
+- [ ] `release.yml` 手工触发时 checkout 的 `tag/ref` 与发布目标一致
 
-## 6. 鍙戝竷鍐崇瓥
+## 6. 产物检查
 
-- [ ] 鏈鍊欓€夌増鏈病鏈夐樆濉炵骇 crash / 鏁版嵁鎹熷潖闂
-- [ ] release artifact 宸插綊妗ｄ繚瀛?
-- [ ] 鎵嬪伐瑙﹀彂 release 鏃讹紝宸茬‘璁?workflow checkout 鐨勬槸鐩爣 tag/ref
-- [ ] 鍝堝笇鏂囦欢宸插綊妗ｄ繚瀛?
-- [ ] 宸茶褰?Windows 涓?Linux 鐨勬渶缁堥獙璇佺粨鏋?
-- [ ] 鍏佽杩涘叆 V1 鍙戝竷
+- [ ] 安装目录包含 `bin/bridge_daemon`
+- [ ] 安装目录包含 `bin/bridge_cli`
+- [ ] 安装目录包含 `share/ai_bridge/README.md`
+- [ ] 安装目录包含关键文档与脚本
+- [ ] 归档可正常解压，最小 smoke 可运行
+
+## 7. 风险签收
+
+- [ ] 当前剩余风险已记录在文档中
+- [ ] 当前已知限制已可接受
+- [ ] 本次候选版本没有阻塞级 crash / 数据损坏问题
+
+## 8. 最终放行
+
+- [ ] 校验文件已归档保存
+- [ ] 已记录 Windows 与 Linux 的最终验证结果
+- [ ] 允许进入 V1 发布

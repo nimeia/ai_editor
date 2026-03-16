@@ -3,7 +3,10 @@ add_library(bridge_core
   src/workspace.cpp
   src/path_policy.cpp
   src/file_service.cpp
+  src/file_ops_extra.cpp
   src/search_service.cpp
+  src/session_service.cpp
+  src/structure_adapters.cpp
   src/patch_service.cpp
   src/logging.cpp
   src/error_codes.cpp

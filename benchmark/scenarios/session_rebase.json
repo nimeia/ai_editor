@@ -1,0 +1,66 @@
+{
+  "name": "session-rebase-baseline",
+  "steps": [
+    {
+      "command": [
+        "session-begin",
+        "--workspace",
+        "${workspace}",
+        "--session-id",
+        "bench-rebase",
+        "--json"
+      ],
+      "expect_json": {
+        "result.state": "created"
+      }
+    },
+    {
+      "command": [
+        "edit-insert-after",
+        "--workspace",
+        "${workspace}",
+        "--session-id",
+        "bench-rebase",
+        "--path",
+        "docs/block.txt",
+        "--query",
+        "beta token",
+        "--content-file",
+        "${insert_file}",
+        "--json"
+      ],
+      "expect_json": {
+        "result.path": "docs/block.txt"
+      }
+    },
+    {
+      "command": [
+        "write",
+        "--workspace",
+        "${workspace}",
+        "--path",
+        "docs/block.txt",
+        "--content-file",
+        "${block_rebased}",
+        "--json"
+      ],
+      "expect_json": {
+        "result.path": "docs/block.txt"
+      }
+    },
+    {
+      "command": [
+        "recovery-check",
+        "--workspace",
+        "${workspace}",
+        "--session-id",
+        "bench-rebase",
+        "--json"
+      ],
+      "expect_json": {
+        "result.rebase_file_count": "1",
+        "result.files.0.status": "rebase_required"
+      }
+    }
+  ]
+}

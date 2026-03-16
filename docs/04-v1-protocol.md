@@ -15,6 +15,11 @@
 - `fs.stat`
 - `fs.read`
 - `fs.read_range`
+- `fs.write`
+- `fs.mkdir`
+- `fs.move`
+- `fs.copy`
+- `fs.rename`
 - `search.text`
 - `search.regex`
 - `request.cancel`
@@ -72,6 +77,7 @@
 - `INVALID_PARAMS`
 - `BINARY_FILE`
 - `ACCESS_DENIED`
+- `ALREADY_EXISTS`
 - `SEARCH_TIMEOUT`
 - `REQUEST_TIMEOUT`
 - `REQUEST_CANCELLED`
@@ -83,6 +89,29 @@
 - `PREVIEW_INVALID`
 - `UNSUPPORTED_METHOD`
 - `INTERNAL_ERROR`
+
+## 文本编辑方法说明（当前实现）
+
+- `fs.write`
+  - 支持直接写入文本文件
+  - 支持 `overwrite`、`create_parents`、`encoding`、`bom`、`eol`
+  - 返回 `bytes_written`、`created`、`parent_created`
+- `fs.mkdir`
+  - 支持递归创建目录
+  - 返回 `created`
+- `fs.move`
+  - 支持文件或目录移动
+  - 支持 `overwrite`
+  - 默认自动创建目标父目录
+  - 会阻止把目录移动到自己的子树中
+- `fs.copy`
+  - 支持文件复制
+  - 支持目录递归复制（需显式 `recursive=true`）
+  - 支持 `overwrite`
+  - 默认自动创建目标父目录
+- `fs.rename`
+  - 仅允许同目录内重命名
+  - 支持 `overwrite`
 
 ## 日志与状态
 
@@ -138,3 +167,49 @@
   - `hash_changed`
   - `mtime_and_hash_changed`
 - `patch.rollback` 返回恢复后的 `current_hash` / `current_mtime`。
+
+
+## Controlled editing structure adapter methods
+
+Additional controlled-editing methods now available on top of `session.*`:
+
+- Markdown
+  - `markdown.replace_section`
+  - `markdown.insert_after_heading`
+  - `markdown.upsert_section`
+- JSON
+  - `json.replace_value`
+  - `json.upsert_key`
+  - `json.append_array_item`
+- YAML
+  - `yaml.replace_value`
+  - `yaml.upsert_key`
+  - `yaml.append_item`
+- HTML
+  - `html.replace_node`
+  - `html.insert_after_node`
+  - `html.set_attribute`
+
+All structure adapter methods still stage changes through the same controlled-editing session pipeline:
+`session.begin -> structure method -> session.inspect/session.preview -> session.commit`.
+
+Common parameters:
+- `path`: target file path inside workspace
+- `session_id`: controlled-editing session id
+- `new_content` / `content-file`: structure payload for replacement or append operations
+
+Method-specific parameters:
+- Markdown: `heading`, `heading_level`
+- JSON/YAML: `key_path`
+- HTML: `selector_query`, and for `html.set_attribute`, `attribute_name`, `attribute_value`
+
+
+## Additional session mutation methods
+
+- `session.drop_change` with `change_id` rejects one staged change.
+- `session.drop_path` with `path` rejects all staged changes for one file.
+
+## Benchmark and IDE surfaces
+
+- Benchmark CI gate is driven by `benchmark/suite.py` + `benchmark/thresholds.json`.
+- VSCode MVP lives under `extensions/vscode-bridge/` and consumes the same CLI contract.

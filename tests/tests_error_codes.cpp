@@ -37,6 +37,30 @@ int main() {
     assert(err.code == "INVALID_PARAMS");
   }
   {
+    const auto err = classify_common_error("target path required");
+    assert(err.code == "INVALID_PARAMS");
+  }
+  {
+    const auto err = classify_common_error("source and target paths are the same");
+    assert(err.code == "INVALID_PARAMS");
+  }
+  {
+    const auto err = classify_common_error("recursive required for directory copy");
+    assert(err.code == "INVALID_PARAMS");
+  }
+  {
+    const auto err = classify_common_error("rename target must stay in same directory");
+    assert(err.code == "INVALID_PARAMS");
+  }
+  {
+    const auto err = classify_common_error("cannot move/copy/rename workspace root");
+    assert(err.code == "INVALID_PARAMS");
+  }
+  {
+    const auto err = classify_common_error("cannot move/copy directory into its own subtree");
+    assert(err.code == "INVALID_PARAMS");
+  }
+  {
     const auto err = classify_common_error("failed to open file: /tmp/secret.txt");
     assert(err.code == "ACCESS_DENIED");
   }

@@ -32,6 +32,9 @@ OUTSIDE_FAIL="$(invoke_bridge_cli_allow_fail read --workspace "$WS" --path ../ou
 MISSING_FAIL="$(invoke_bridge_cli_allow_fail stat --workspace "$WS" --path docs/missing.txt --json)"
 MKDIR_JSON="$(invoke_bridge_cli mkdir --workspace "$WS" --path docs/generated/nested --json)"
 WRITE_JSON="$(invoke_bridge_cli write --workspace "$WS" --path docs/generated/nested/out.txt --content-file "$WS/docs/range.txt" --json)"
+MOVE_JSON="$(invoke_bridge_cli move --workspace "$WS" --path docs/generated/nested/out.txt --target-path docs/generated/moved.txt --json)"
+COPY_JSON="$(invoke_bridge_cli copy --workspace "$WS" --path docs/generated/moved.txt --target-path docs/generated/copies/copied.txt --create-parents --json)"
+RENAME_JSON="$(invoke_bridge_cli rename --workspace "$WS" --path docs/generated/moved.txt --target-path docs/generated/renamed.txt --json)"
 assert_contains "$LIST_JSON" '"ok":true'
 assert_contains "$LIST_JSON" '"path":"docs"'
 assert_not_contains "$LIST_JSON" 'node_modules/pkg/index.js'
@@ -52,7 +55,8 @@ assert_contains "$OUTSIDE_FAIL" 'PATH_OUTSIDE_WORKSPACE'
 assert_contains "$MISSING_FAIL" 'FILE_NOT_FOUND'
 assert_contains "$MKDIR_JSON" '"created":true'
 assert_contains "$WRITE_JSON" '"path":"docs/generated/nested/out.txt"'
-assert_contains "$(cat "$WS/docs/generated/nested/out.txt")" $'one\ntwo\nthree'
+assert_contains "$(cat "$WS/docs/generated/renamed.txt")" $'one\ntwo\nthree'
+assert_contains "$(cat "$WS/docs/generated/copies/copied.txt")" $'one\ntwo\nthree'
 stop_bridge_daemon
 trap - EXIT
 bridge_log 'functional_fs_ops passed'

@@ -1,0 +1,6 @@
+{
+  "name": "search-high-similarity-baseline",
+  "steps": [
+    {"command": ["search-text", "--workspace", "${workspace}", "--query", "token", "--json"], "expect_contains": ["\"matches\""]}
+  ]
+}

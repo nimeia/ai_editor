@@ -92,6 +92,53 @@ struct FsMkdirResult {
   std::string error;
 };
 
+struct FsMoveOptions {
+  bool create_parents = true;
+  bool overwrite = false;
+};
+
+struct FsMoveResult {
+  bool ok = false;
+  std::string path;
+  std::string target_path;
+  bool moved = false;
+  bool parent_created = false;
+  bool overwritten = false;
+  PathPolicyKind policy = PathPolicyKind::Normal;
+  std::string error;
+};
+
+struct FsCopyOptions {
+  bool create_parents = true;
+  bool overwrite = false;
+  bool recursive = false;
+};
+
+struct FsCopyResult {
+  bool ok = false;
+  std::string path;
+  std::string target_path;
+  bool copied = false;
+  bool parent_created = false;
+  bool overwritten = false;
+  PathPolicyKind policy = PathPolicyKind::Normal;
+  std::string error;
+};
+
+struct FsRenameOptions {
+  bool overwrite = false;
+};
+
+struct FsRenameResult {
+  bool ok = false;
+  std::string path;
+  std::string target_path;
+  bool renamed = false;
+  bool overwritten = false;
+  PathPolicyKind policy = PathPolicyKind::Normal;
+  std::string error;
+};
+
 struct FsReadStreamOptions {
   std::size_t max_bytes = 1024 * 1024;
   std::size_t chunk_bytes = 16 * 1024;
@@ -140,5 +187,17 @@ FsWriteResult fs_write(const WorkspaceConfig& workspace,
 FsMkdirResult fs_mkdir(const WorkspaceConfig& workspace,
                        const std::string& requested_path,
                        const FsMkdirOptions& options = {});
+FsMoveResult fs_move(const WorkspaceConfig& workspace,
+                     const std::string& requested_path,
+                     const std::string& requested_target_path,
+                     const FsMoveOptions& options = {});
+FsCopyResult fs_copy(const WorkspaceConfig& workspace,
+                     const std::string& requested_path,
+                     const std::string& requested_target_path,
+                     const FsCopyOptions& options = {});
+FsRenameResult fs_rename(const WorkspaceConfig& workspace,
+                         const std::string& requested_path,
+                         const std::string& requested_target_path,
+                         const FsRenameOptions& options = {});
 
 } // namespace bridge::core

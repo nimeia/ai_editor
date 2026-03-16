@@ -1,5 +1,6 @@
-# V1 鏋勫缓杩愯涓庢祴璇曟寚鍗?
-## 1. 鏋勫缓
+# V1 构建运行与测试指南
+
+## 1. 构建
 
 ### POSIX
 
@@ -15,34 +16,37 @@ cmake -S . -B build
 cmake --build build --config Release
 ```
 
-## 2. 杩愯娴嬭瘯
+## 2. 运行测试
 
-### POSIX 鍏ㄩ噺娴嬭瘯
+### POSIX 全量测试
 
 ```bash
 ctest --test-dir build --output-on-failure
 ```
 
-### Windows 鍏ㄩ噺娴嬭瘯
+### Windows 全量测试
 
 ```powershell
 ctest --test-dir build -C Release --output-on-failure
 ```
 
-
-### POSIX 鍔熻兘娴嬭瘯鑴氭湰锛堟寜鍔熻兘鍩燂級
+### POSIX 功能测试脚本（按功能域）
 
 ```bash
-ctest --test-dir build -R 'test_functional_(workspace_ops|fs_ops|search_ops|patch_lifecycle|stream_cancel_timeout|logging_release)' --output-on-failure
+ctest --test-dir build -R 'test_functional_(workspace_ops|workspace_edges|fs_ops|search_ops|patch_lifecycle|stream_cancel_timeout|cancel_edges|logging_release|cli_contract)' --output-on-failure
 ```
 
-褰撳墠宸茶ˉ榻愮殑鍔熻兘鑴氭湰鍒嗙粍锛?
-- workspace 鍩虹閾捐矾锛歚test_functional_workspace_ops`
-- 鏂囦欢璇诲彇涓庤竟鐣岋細`test_functional_fs_ops`
-- 鎼滅储涓庤繃婊わ細`test_functional_search_ops`
-- patch 鐢熷懡鍛ㄦ湡锛歚test_functional_patch_lifecycle`
-- stream / cancel / timeout锛歚test_functional_stream_cancel_timeout`
-- runtime/audit 鏃ュ織 + install/cpack 楠岃瘉锛歚test_functional_logging_release`
+当前已补齐的功能脚本分组：
+
+- workspace 基础链路：`test_functional_workspace_ops`
+- workspace 边界与策略：`test_functional_workspace_edges`
+- 文本编辑与文件操作：`test_functional_fs_ops`
+- 搜索与过滤：`test_functional_search_ops`
+- patch 生命周期：`test_functional_patch_lifecycle`
+- stream / cancel / timeout：`test_functional_stream_cancel_timeout`
+- cancel 边界行为：`test_functional_cancel_edges`
+- runtime/audit 日志 + install/cpack 验证：`test_functional_logging_release`
+- CLI 合同与输出：`test_functional_cli_contract`
 
 ### Windows smoke
 
@@ -50,9 +54,9 @@ ctest --test-dir build -R 'test_functional_(workspace_ops|fs_ops|search_ops|patc
 pwsh ./scripts/windows_smoke.ps1 -BuildDir ./build -Config Release
 ```
 
-## 3. 鎵嬪伐杩愯
+## 3. 手工运行
 
-### 鍚姩 daemon
+### 启动 daemon
 
 POSIX:
 
@@ -66,7 +70,7 @@ Windows:
 .\build\apps\bridge_daemon\Release\bridge_daemon.exe --workspace $PWD
 ```
 
-### 甯哥敤 CLI 鍛戒护
+### 常用 CLI 命令
 
 POSIX:
 
@@ -75,6 +79,11 @@ POSIX:
 ./build/apps/bridge_cli/bridge_cli info --workspace "$PWD"
 ./build/apps/bridge_cli/bridge_cli list --workspace "$PWD"
 ./build/apps/bridge_cli/bridge_cli read --workspace "$PWD" --path README.md
+./build/apps/bridge_cli/bridge_cli write --workspace "$PWD" --path demo.txt --content 'hello'
+./build/apps/bridge_cli/bridge_cli mkdir --workspace "$PWD" --path notes/archive
+./build/apps/bridge_cli/bridge_cli move --workspace "$PWD" --path demo.txt --target-path notes/demo.txt
+./build/apps/bridge_cli/bridge_cli copy --workspace "$PWD" --path notes/demo.txt --target-path notes/demo-copy.txt
+./build/apps/bridge_cli/bridge_cli rename --workspace "$PWD" --path notes/demo-copy.txt --target-path notes/demo-copy-renamed.txt
 ./build/apps/bridge_cli/bridge_cli search-text --workspace "$PWD" --query bridge --exts .md,.cpp
 ```
 
@@ -85,58 +94,72 @@ Windows:
 .\build\apps\bridge_cli\Release\bridge_cli.exe info --workspace $PWD
 .\build\apps\bridge_cli\Release\bridge_cli.exe list --workspace $PWD
 .\build\apps\bridge_cli\Release\bridge_cli.exe read --workspace $PWD --path README.md
+.\build\apps\bridge_cli\Release\bridge_cli.exe write --workspace $PWD --path demo.txt --content 'hello'
+.\build\apps\bridge_cli\Release\bridge_cli.exe mkdir --workspace $PWD --path notes/archive
+.\build\apps\bridge_cli\Release\bridge_cli.exe move --workspace $PWD --path demo.txt --target-path notes/demo.txt
+.\build\apps\bridge_cli\Release\bridge_cli.exe copy --workspace $PWD --path notes/demo.txt --target-path notes/demo-copy.txt
+.\build\apps\bridge_cli\Release\bridge_cli.exe rename --workspace $PWD --path notes/demo-copy.txt --target-path notes/demo-copy-renamed.txt
 .\build\apps\bridge_cli\Release\bridge_cli.exe search-text --workspace $PWD --query bridge --exts .md,.cpp
 ```
 
-## 4. 閲嶇偣楠岃瘉椤?
+## 4. 重点验证项
+
 - handshake / ping / info / open
-- workspace 璺緞褰掍竴鍖栦笌 containment
+- workspace 路径归一化与 containment
 - list / stat / read / read-range
+- write / mkdir / move / copy / rename
 - search text / regex
-- stream final summary 瀛楁缁熶竴
-- timeout / cancel 琛屼负
+- stream final summary 字段统一
+- timeout / cancel 行为
 - patch preview / apply / rollback / history
-- Windows unicode / space path 涓?backslash-path normalization
-- runtime / audit / history / preview / backup 钀界洏涓庢竻鐞?
-## 5. 璇婃柇寤鸿
+- Windows Unicode / space path 与 backslash-path normalization
+- runtime / audit / history / preview / backup 落盘与清理
 
-### 鐪?runtime 璺緞
+## 5. 诊断建议
 
-浼樺厛閫氳繃 `workspace.info` 鎴?`workspace.open` 杩斿洖鐨?`runtime_dir` 鍋氬畾浣嶏紝涓嶈鍦ㄨ剼鏈噷鍐欐杩愯鏃剁洰褰曘€?
-### 鐪嬫棩蹇?
-- runtime log锛氬畾浣?daemon 杩愯鏃堕敊璇?- audit log锛氬畾浣嶈姹傜骇琛屼负鍜岄敊璇爜
-- history log锛氬畾浣?patch/rollback 閾捐矾
+### 看 runtime 路径
 
-### 鍏虫敞 timeout / cancel
+优先通过 `workspace.info` 或 `workspace.open` 返回的 `runtime_dir` 做定位，不要在脚本里硬编码运行时目录。
 
-褰撳墠鑻ヤ娇鐢?`--timeout-ms`锛孋LI 浼氱粰 transport 澶氱暀涓€涓皬缂撳啿锛岃繖鏍锋洿瀹规槗鎷垮埌缁撴瀯鍖?`REQUEST_TIMEOUT` / `SEARCH_TIMEOUT` 鍝嶅簲锛岃€屼笉鏄洿鎺ヨ繛鎺ヨ秴鏃躲€?
+### 看日志
 
-## 鍙戝竷鎵撳寘
+- runtime log：定位 daemon 运行时错误
+- audit log：定位请求级行为和错误码
+- history log：定位 patch / rollback 链路
 
-P5 宸茶ˉ榻愬畨瑁呬笌褰掓。鎵撳寘鍩虹嚎锛孭6 鍙堣ˉ浜嗕竴閿叏閲忛獙璇佽剼鏈€?
-- POSIX 鎵撳寘锛歚./scripts/package_release.sh --build-dir build --out-dir dist --generator TGZ --run-tests --jobs 1`
-- Windows 鎵撳寘锛歚pwsh ./scripts/package_release.ps1 -BuildDir build -Config Release -OutDir dist -Generator ZIP -RunTests -Jobs 1`
-- POSIX 鍏ㄩ噺楠岃瘉锛歚./scripts/validate_v1.sh --build-dir build --jobs 1`
-- Windows 鍘熺敓鍔熻兘娴嬭瘯锛歚pwsh ./tests/functional_windows_native.ps1 <daemon.exe> <bridge_cli.exe> <run_dir>`
-- Windows 鍏ㄩ噺楠岃瘉锛歚pwsh ./scripts/validate_v1.ps1 -BuildDir build -Config Release -Jobs 1`
+### 关注 timeout / cancel
 
-Windows 鍏ㄩ噺楠岃瘉鑴氭湰鐜板湪浼氬湪 `.p6_validation_summary/` 涓嬭嚜鍔ㄧ敓鎴愶細
+当前若使用 `--timeout-ms`，CLI 会给 transport 多留一个小缓冲，这样更容易拿到结构化 `REQUEST_TIMEOUT` / `SEARCH_TIMEOUT` 响应，而不是直接连接超时。
 
-- `windows_validation_summary.json`锛氱粨鏋勫寲鏈哄櫒鍙鎽樿
-- `windows_validation_summary.md`锛氫究浜庝汉宸ユ煡鐪嬬殑闃舵鎬х粨鏋滄眹鎬?
-鍗充娇涓€旀煇涓樁娈靛け璐ワ紝涓婅堪鎽樿鏂囦欢涔熶細鍐欏嚭锛屼究浜庡揩閫熷畾浣嶅け璐ユ楠ゃ€?
-鍦ㄨ祫婧愬彈闄愮幆澧冮噷锛屽缓璁紭鍏堜娇鐢?`jobs=1`锛屼互鎹㈠彇鏇寸ǔ瀹氱殑鏀跺熬涓庢墦鍖呰繃绋嬨€?
-鏇村畬鏁寸殑鍙戝竷璇存槑瑙?`docs/08-v1-release-and-deployment.md`锛屾湰娆￠獙璇佺粨鏋滆 `docs/09-v1-validation-report.md`銆?
+## 6. 发布与打包
+
+P5 已补齐安装与归档打包基线，P6 又补了一键全量验证脚本。
+
+- POSIX 打包：`./scripts/package_release.sh --build-dir build --out-dir dist --generator TGZ --run-tests --jobs 1`
+- Windows 打包：`pwsh ./scripts/package_release.ps1 -BuildDir build -Config Release -OutDir dist -Generator ZIP -RunTests -Jobs 1`
+- POSIX 全量验证：`./scripts/validate_v1.sh --build-dir build --jobs 1`
+- Windows 原生功能测试：`pwsh ./tests/functional_windows_native.ps1 <daemon.exe> <bridge_cli.exe> <run_dir>`
+- Windows 全量验证：`pwsh ./scripts/validate_v1.ps1 -BuildDir build -Config Release -Jobs 1`
+
+Windows 全量验证脚本现在会在 `.p6_validation_summary/` 下自动生成：
+
+- `windows_validation_summary.json`：结构化机器可读摘要
+- `windows_validation_summary.md`：便于人工查看的阶段性结果摘要
+
+即使中途某个阶段失败，上述摘要文件也会写出，便于快速定位失败步骤。在资源受限环境里，建议优先使用 `jobs=1`，以换取更稳定的收尾与打包过程。
+
+更完整的发布说明见 `docs/08-v1-release-and-deployment.md`，本次验证结果见 `docs/09-v1-validation-report.md`。
 
 ## 7. GitHub Actions
 
-浠撳簱鎻愪緵浜嗕袱鏉?GitHub Actions 宸ヤ綔娴侊細
+仓库提供了两条 GitHub Actions 工作流：
 
-- `ci.yml`锛氭棩甯?CI锛岃鐩?Linux / macOS / Windows
-- `release.yml`锛氭爣绛惧彂甯冧笌鎵嬪伐鍙戝竷锛岃鐩?Linux / macOS / Windows锛屽苟涓婁紶 Release 浜х墿
+- `ci.yml`：日常 CI，覆盖 Linux / macOS / Windows
+- `release.yml`：标签发布与手工发布，覆盖 Linux / macOS / Windows，并上传 Release 产物
 
-杩欎袱鏉″伐浣滄祦閮界洿鎺ヨ皟鐢ㄤ粨搴撳唴鐜版湁鑴氭湰锛?
-- POSIX锛歚./scripts/validate_v1.sh --build-dir build --config Release --jobs 1`
-- Windows锛歚pwsh ./scripts/validate_v1.ps1 -BuildDir build -Config Release -Jobs 1`
+这两条工作流都直接调用仓库内现有脚本：
 
-杩欐牱鏈湴楠岃瘉璺緞涓?CI 璺緞淇濇寔涓€鑷达紝鍑忓皯鈥滄湰鍦拌兘杩囥€丆I 涓嶈繃鈥濈殑鍒嗗弶闂銆?
+- POSIX：`./scripts/validate_v1.sh --build-dir build --config Release --jobs 1`
+- Windows：`pwsh ./scripts/validate_v1.ps1 -BuildDir build -Config Release -Jobs 1`
+
+这样本地验证路径与 CI 路径保持一致，减少“本地能过、CI 不过”的分叉问题。

@@ -1,0 +1,21 @@
+{
+  "name": "structure-roundtrip",
+  "steps": [
+    {
+      "command": ["session-begin", "--workspace", "${workspace}", "--session-id", "bench-struct", "--json"],
+      "expect_json": {"result.state": "created"}
+    },
+    {
+      "command": ["markdown-upsert-section", "--workspace", "${workspace}", "--session-id", "bench-struct", "--path", "docs/guide.md", "--heading", "Bench", "--heading-level", "2", "--content-file", "${md_content}", "--json"],
+      "expect_json": {"result.path": "docs/guide.md"}
+    },
+    {
+      "command": ["json-upsert-key", "--workspace", "${workspace}", "--session-id", "bench-struct", "--path", "cfg/settings.json", "--key-path", "bench.enabled", "--content-file", "${json_content}", "--json"],
+      "expect_json": {"result.path": "cfg/settings.json"}
+    },
+    {
+      "command": ["session-preview", "--workspace", "${workspace}", "--session-id", "bench-struct", "--json"],
+      "expect_json": {"result.previewed_file_count": "2"}
+    }
+  ]
+}

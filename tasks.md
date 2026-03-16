@@ -67,11 +67,38 @@
 - [x] deployment / runtime directory notes for release consumption
 - [x] `bridge_cli` / `bridge_daemon` `--version` output baseline
 
+## Controlled Editing Mainline
+
+### Completed in this round
+
+- [x] Merge top-level `Task.md` into repository and add `docs/12-controlled-editing-task.md`
+- [x] E1 baseline scaffolding: add controlled-editing domain/session models and protocol formatting helpers
+- [x] E2 Search v2 baseline: `match_id` / `anchor` / `selector_reason` / `confidence` / `scope_path` / line filters / exact-path and directory-prefix filters
+- [x] E4 Session v1 baseline: `session.begin` / `session.inspect` / `session.preview` / `session.commit` / `session.abort` / `session.recover` / `session.snapshot`
+- [x] E5 first editing primitives: `edit.replace_range` / `edit.replace_block` / `edit.insert_before` / `edit.insert_after` / `edit.delete_block`
+- [x] CLI baseline for new session/edit commands
+- [x] unit/integration coverage for search v2 + session/edit flow
+
+### Next after this round
+
+- [ ] E3 strengthen selector/locator: nearest-anchor, ambiguity classification, drift/rebase beyond exact substring matching
+- [x] E6 inspect/preview/risk v1 baseline: richer inspect summaries, preview diff metadata, aggregate risk scoring, human-readable highlights
+- [x] E7 recovery/conflict v2 baseline: `recovery.check`, `recovery.rebase`, commit gate on conflict/rebase, recover summary counts
+- [x] E8 benchmark skeleton: `benchmark/runner.py` + starter scenarios for search similarity and recovery/rebase flows
+- [x] E9A structure adapters MVP for Markdown / JSON
+- [x] E9B structure adapters baseline for YAML / HTML
+- [x] E10 SDK baseline for Python / TypeScript + smoke coverage
+- [x] E8 benchmark CI gate + threshold report baseline
+- [x] E11 VSCode extension MVP baseline (extension package + session/search/preview/reject/commit/recover UI scaffolding + smoke coverage)
+
 ## Next
 
 - [x] P6 Linux validation rerun + validation/report scripts baseline
 - [x] P6 Windows validation script structured summary output baseline
 - [x] P6 test documentation sync for Windows matrix / execution order
 - [x] text editing baseline enhancement round 1 (`fs.write`, `fs.mkdir`, patch-create-missing-target, diff/diagnostic refinement)
-- [ ] P6 Windows native rerun on a real Windows host
+- [x] text editing baseline enhancement round 2 (`fs.move`, `fs.copy`, `fs.rename`, CLI/protocol/test coverage)
+- [ ] P6 Windows native rerun on a real Windows host (combined sign-off automation, report promotion, and verification checker added; external execution pending)
 - [x] final V1 release checklist
+- [x] follow-up doc sync for text-editing methods + protocol/build/release docs
+- [x] POSIX script/doc LF normalization and garbled-doc repair

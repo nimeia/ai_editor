@@ -37,7 +37,7 @@ start_bridge_daemon functional_cli_contract
 NOARGS_PAYLOAD="$(invoke_bridge_cli_allow_fail)"
 split_allow_fail "$NOARGS_PAYLOAD" NOARGS_CODE NOARGS_TEXT
 [[ "$NOARGS_CODE" == "1" ]] || bridge_fail "expected bridge_cli with no args to exit 1"
-assert_contains "$NOARGS_TEXT" 'usage: bridge_cli <ping|info|open|resolve|list|stat|read|read-range|write|mkdir|search-text|search-regex|cancel|patch-preview|patch-apply|patch-rollback|history>'
+assert_contains "$NOARGS_TEXT" 'usage: bridge_cli <ping|info|open|resolve|list|stat|read|read-range|write|mkdir|move|copy|rename|search-text|search-regex|session-begin|session-inspect|session-preview|session-commit|session-abort|session-drop-change|session-drop-path|session-recover|session-snapshot|edit-replace-range|edit-replace-block|edit-insert-before|edit-insert-after|edit-delete-block|markdown-replace-section|markdown-insert-after-heading|markdown-upsert-section|json-replace-value|json-upsert-key|json-append-array-item|yaml-replace-value|yaml-upsert-key|yaml-append-item|html-replace-node|html-insert-after-node|html-set-attribute|cancel|patch-preview|patch-apply|patch-rollback|history>'
 
 UNSUPPORTED_PAYLOAD="$(invoke_bridge_cli_allow_fail not-a-command)"
 split_allow_fail "$UNSUPPORTED_PAYLOAD" UNSUPPORTED_CODE UNSUPPORTED_TEXT
@@ -67,11 +67,17 @@ assert_contains "$SEARCH_TEXT_OUT" 'beta token'
 STAT_TEXT="$(invoke_bridge_cli stat --workspace "$WS" --path docs/sample.txt)"
 MKDIR_TEXT="$(invoke_bridge_cli mkdir --workspace "$WS" --path docs/generated/nested)"
 WRITE_TEXT="$(invoke_bridge_cli write --workspace "$WS" --path docs/generated/nested/new.txt --content-file "$RUN_DIR/sample_new.txt")"
+MOVE_TEXT="$(invoke_bridge_cli move --workspace "$WS" --path docs/generated/nested/new.txt --target-path docs/generated/moved.txt)"
+COPY_TEXT="$(invoke_bridge_cli copy --workspace "$WS" --path docs/generated/moved.txt --target-path docs/generated/copies/copied.txt --create-parents)"
+RENAME_TEXT="$(invoke_bridge_cli rename --workspace "$WS" --path docs/generated/moved.txt --target-path docs/generated/renamed.txt)"
 assert_contains "$STAT_TEXT" 'path: docs/sample.txt'
 assert_contains "$STAT_TEXT" 'kind: file'
 assert_contains "$STAT_TEXT" 'encoding: utf-8'
 assert_contains "$MKDIR_TEXT" 'path: docs/generated/nested'
 assert_contains "$WRITE_TEXT" 'path: docs/generated/nested/new.txt'
+assert_contains "$MOVE_TEXT" 'target_path: docs/generated/moved.txt'
+assert_contains "$COPY_TEXT" 'target_path: docs/generated/copies/copied.txt'
+assert_contains "$RENAME_TEXT" 'target_path: docs/generated/renamed.txt'
 
 RESOLVE_TEXT="$(invoke_bridge_cli resolve --workspace "$WS" --path docs/sample.txt)"
 assert_contains "$RESOLVE_TEXT" 'workspace_root: '

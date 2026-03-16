@@ -200,4 +200,54 @@ else()
     COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/functional_cli_contract.sh $<TARGET_FILE:bridge_daemon> $<TARGET_FILE:bridge_cli> ${CMAKE_CURRENT_BINARY_DIR}
   )
   set_tests_properties(test_functional_cli_contract PROPERTIES ENVIRONMENT "CTEST_OUTPUT_ON_FAILURE=1")
+
+  add_test(
+    NAME test_functional_session_drop_change_contract
+    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/functional_session_drop_change_contract.sh $<TARGET_FILE:bridge_daemon> $<TARGET_FILE:bridge_cli> ${CMAKE_CURRENT_BINARY_DIR}
+  )
+  set_tests_properties(test_functional_session_drop_change_contract PROPERTIES ENVIRONMENT "CTEST_OUTPUT_ON_FAILURE=1")
+
+  add_test(
+    NAME test_functional_session_drop_change_edges
+    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/functional_session_drop_change_edges.sh $<TARGET_FILE:bridge_daemon> $<TARGET_FILE:bridge_cli> ${CMAKE_CURRENT_BINARY_DIR}
+  )
+  set_tests_properties(test_functional_session_drop_change_edges PROPERTIES ENVIRONMENT "CTEST_OUTPUT_ON_FAILURE=1")
+
+  add_test(
+    NAME test_integration_session_ops
+    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/integration_session_ops.sh $<TARGET_FILE:bridge_daemon> $<TARGET_FILE:bridge_cli> ${CMAKE_CURRENT_BINARY_DIR}
+  )
+  set_tests_properties(test_integration_session_ops PROPERTIES ENVIRONMENT "CTEST_OUTPUT_ON_FAILURE=1")
+
+  add_test(
+    NAME test_integration_recovery_ops
+    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/integration_recovery_ops.sh $<TARGET_FILE:bridge_daemon> $<TARGET_FILE:bridge_cli> ${CMAKE_CURRENT_BINARY_DIR}
+  )
+  set_tests_properties(test_integration_recovery_ops PROPERTIES ENVIRONMENT "CTEST_OUTPUT_ON_FAILURE=1")
+
+  add_test(
+    NAME test_integration_structure_ops
+    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/integration_structure_ops.sh $<TARGET_FILE:bridge_daemon> $<TARGET_FILE:bridge_cli> ${CMAKE_CURRENT_BINARY_DIR}
+  )
+  set_tests_properties(test_integration_structure_ops PROPERTIES ENVIRONMENT "CTEST_OUTPUT_ON_FAILURE=1")
+
+  add_test(
+    NAME test_integration_sdk_ops
+    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/integration_sdk_ops.sh $<TARGET_FILE:bridge_daemon> $<TARGET_FILE:bridge_cli> ${CMAKE_CURRENT_BINARY_DIR}
+  )
+  set_tests_properties(test_integration_sdk_ops PROPERTIES ENVIRONMENT "CTEST_OUTPUT_ON_FAILURE=1")
+
+  add_test(
+    NAME test_integration_vscode_extension_ops
+    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/integration_vscode_extension_ops.sh $<TARGET_FILE:bridge_daemon> $<TARGET_FILE:bridge_cli> ${CMAKE_CURRENT_BINARY_DIR}
+  )
+  set_tests_properties(test_integration_vscode_extension_ops PROPERTIES ENVIRONMENT "CTEST_OUTPUT_ON_FAILURE=1")
 endif()
+
+add_executable(test_session_service tests_session_service.cpp)
+target_link_libraries(test_session_service PRIVATE bridge_core)
+add_test(NAME test_session_service COMMAND test_session_service)
+
+add_executable(test_structure_adapters tests_structure_adapters.cpp)
+target_link_libraries(test_structure_adapters PRIVATE bridge_core)
+add_test(NAME test_structure_adapters COMMAND test_structure_adapters)

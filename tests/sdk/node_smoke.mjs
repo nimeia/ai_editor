@@ -1,0 +1,20 @@
+import { readFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { BridgeClient } from '../../sdk/typescript/bridge_sdk.mjs';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const cli = process.argv[2];
+const workspace = process.argv[3];
+const client = new BridgeClient(cli, workspace, { sessionId: 'sdk-node' });
+client.sessionBegin();
+client.yamlAppendItem('cfg/settings.yaml', 'app.flags', 'node-sdk');
+client.htmlSetAttribute('web/index.html', 'div id="app"', 'data-sdk', 'node');
+const preview = client.sessionPreview();
+if (preview.previewed_file_count !== 2) process.exit(2);
+client.sessionCommit();
+const yaml = readFileSync(join(workspace, 'cfg', 'settings.yaml'), 'utf8');
+const html = readFileSync(join(workspace, 'web', 'index.html'), 'utf8');
+if (!yaml.includes('node-sdk')) process.exit(3);
+if (!html.includes('data-sdk="node"')) process.exit(4);
+console.log('sdk smoke ok');

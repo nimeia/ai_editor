@@ -1,0 +1,152 @@
+{
+  "name": "ai-bridge-vscode",
+  "displayName": "AI Bridge",
+  "description": "VSCode MVP for controlled AI text editing sessions.",
+  "version": "0.1.0",
+  "publisher": "local",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./extension.js",
+  "activationEvents": [
+    "onCommand:bridgeAi.configureCliPath",
+    "onCommand:bridgeAi.sessionBegin",
+    "onCommand:bridgeAi.searchText",
+    "onCommand:bridgeAi.stageReplaceSelection",
+    "onCommand:bridgeAi.stageReplaceFromSearch",
+    "onCommand:bridgeAi.refreshSession",
+    "onCommand:bridgeAi.previewSession",
+    "onCommand:bridgeAi.commitSession",
+    "onCommand:bridgeAi.abortSession",
+    "onCommand:bridgeAi.recoverSession",
+    "onView:bridgeAi.searchResults",
+    "onView:bridgeAi.stagedChanges"
+  ],
+  "contributes": {
+    "configuration": {
+      "title": "AI Bridge",
+      "properties": {
+        "bridgeAi.cliPath": {
+          "type": "string",
+          "default": "",
+          "description": "Absolute path to the bridge_cli binary."
+        },
+        "bridgeAi.sessionId": {
+          "type": "string",
+          "default": "vscode-session",
+          "description": "Default session id used by the extension."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "bridgeAi.configureCliPath",
+        "title": "AI Bridge: Configure CLI Path"
+      },
+      {
+        "command": "bridgeAi.sessionBegin",
+        "title": "AI Bridge: Begin Session"
+      },
+      {
+        "command": "bridgeAi.searchText",
+        "title": "AI Bridge: Search Text"
+      },
+      {
+        "command": "bridgeAi.stageReplaceSelection",
+        "title": "AI Bridge: Stage Replace Selection"
+      },
+      {
+        "command": "bridgeAi.stageReplaceFromSearch",
+        "title": "AI Bridge: Stage Replace From Search Result"
+      },
+      {
+        "command": "bridgeAi.openSearchResult",
+        "title": "AI Bridge: Open Search Result"
+      },
+      {
+        "command": "bridgeAi.refreshSession",
+        "title": "AI Bridge: Refresh Session"
+      },
+      {
+        "command": "bridgeAi.previewSession",
+        "title": "AI Bridge: Preview Session"
+      },
+      {
+        "command": "bridgeAi.rejectChange",
+        "title": "AI Bridge: Reject Staged Change"
+      },
+      {
+        "command": "bridgeAi.rejectFile",
+        "title": "AI Bridge: Reject Staged File"
+      },
+      {
+        "command": "bridgeAi.commitSession",
+        "title": "AI Bridge: Commit Session"
+      },
+      {
+        "command": "bridgeAi.abortSession",
+        "title": "AI Bridge: Abort Session"
+      },
+      {
+        "command": "bridgeAi.recoverSession",
+        "title": "AI Bridge: Recover Session"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "bridgeAi.searchResults",
+          "name": "AI Bridge Search Results"
+        },
+        {
+          "id": "bridgeAi.stagedChanges",
+          "name": "AI Bridge Session"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "bridgeAi.searchText",
+          "when": "view == bridgeAi.searchResults",
+          "group": "navigation"
+        },
+        {
+          "command": "bridgeAi.refreshSession",
+          "when": "view == bridgeAi.stagedChanges",
+          "group": "navigation"
+        },
+        {
+          "command": "bridgeAi.previewSession",
+          "when": "view == bridgeAi.stagedChanges",
+          "group": "navigation@1"
+        },
+        {
+          "command": "bridgeAi.commitSession",
+          "when": "view == bridgeAi.stagedChanges",
+          "group": "navigation@2"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "bridgeAi.stageReplaceFromSearch",
+          "when": "view == bridgeAi.searchResults && viewItem == bridge-search-result",
+          "group": "inline"
+        },
+        {
+          "command": "bridgeAi.rejectFile",
+          "when": "view == bridgeAi.stagedChanges && viewItem == bridge-staged-file",
+          "group": "inline"
+        },
+        {
+          "command": "bridgeAi.rejectChange",
+          "when": "view == bridgeAi.stagedChanges && viewItem == bridge-staged-change",
+          "group": "inline"
+        }
+      ]
+    }
+  }
+}
