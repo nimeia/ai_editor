@@ -135,8 +135,8 @@ Windows:
 
 P5 已补齐安装与归档打包基线，P6 又补了一键全量验证脚本。
 
-- POSIX 打包：`./scripts/package_release.sh --build-dir build --out-dir dist --generator TGZ --run-tests --jobs 1`
-- Windows 打包：`pwsh ./scripts/package_release.ps1 -BuildDir build -Config Release -OutDir dist -Generator ZIP -RunTests -Jobs 1`
+- POSIX 打包：`./scripts/package_release.sh --build-dir build --out-dir dist --run-tests --jobs 1`
+- Windows 打包：`pwsh ./scripts/package_release.ps1 -BuildDir build -Config Release -OutDir dist -RunTests -Jobs 1`
 - POSIX 全量验证：`./scripts/validate_v1.sh --build-dir build --jobs 1`
 - Windows 原生功能测试：`pwsh ./tests/functional_windows_native.ps1 <daemon.exe> <bridge_cli.exe> <run_dir>`
 - Windows 全量验证：`pwsh ./scripts/validate_v1.ps1 -BuildDir build -Config Release -Jobs 1`

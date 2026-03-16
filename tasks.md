@@ -65,6 +65,7 @@
 - [x] CPack archive packaging baseline
 - [x] packaging / release script baseline
 - [x] deployment / runtime directory notes for release consumption
+- [x] native installer packaging baseline (Linux DEB / macOS PKG / Windows NSIS) + slim runtime package contents
 - [x] `bridge_cli` / `bridge_daemon` `--version` output baseline
 
 ## Controlled Editing Mainline

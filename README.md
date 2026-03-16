@@ -223,7 +223,7 @@ For stepwise triage, run in this order:
 2. POSIX integration tests
 3. POSIX functional tests
 4. `./scripts/validate_v1.sh --build-dir build --jobs 1`
-5. `./scripts/package_release.sh --build-dir build --out-dir dist --generator TGZ --run-tests --jobs 1`
+5. `./scripts/package_release.sh --build-dir build --out-dir dist --run-tests --jobs 1`
 
 ### Windows
 
@@ -244,7 +244,7 @@ For a one-shot rerun:
 ctest --test-dir build -C Release --output-on-failure
 pwsh ./scripts/windows_smoke.ps1 -BuildDir ./build -Config Release
 pwsh ./scripts/validate_v1.ps1 -BuildDir build -Config Release -Jobs 1
-pwsh ./scripts/package_release.ps1 -BuildDir build -Config Release -OutDir dist -Generator ZIP -RunTests -Jobs 1
+pwsh ./scripts/package_release.ps1 -BuildDir build -Config Release -OutDir dist -RunTests -Jobs 1
 ```
 
 
@@ -271,3 +271,20 @@ Representative CLI commands:
 ## VSCode extension MVP
 
 The repository includes `extensions/vscode-bridge/` with a no-build VSCode MVP for search, staged session inspection, preview, reject, commit, and recover flows.
+
+
+## Release packaging
+
+Current release packaging now produces both a portable archive and a platform-native installer by default:
+
+- Linux: `*.tar.gz` + `*.deb`
+- macOS: `*.tar.gz` + `*.pkg`
+- Windows: `*.zip` + `*.exe` (NSIS)
+
+Runtime packages are now slimmed down to only the runtime payload:
+
+- `bin/bridge_daemon(.exe)`
+- `bin/bridge_cli(.exe)`
+- `share/ai_bridge/README.md`
+
+They no longer ship the internal validation docs, packaging scripts, or development headers.

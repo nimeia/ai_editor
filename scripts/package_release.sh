@@ -4,9 +4,29 @@ set -euo pipefail
 BUILD_DIR="build"
 CONFIG="Release"
 OUT_DIR="dist"
-GENERATOR="TGZ"
 RUN_TESTS=0
 JOBS=1
+GENERATORS=()
+
+platform_default_generators() {
+  case "$(uname -s)" in
+    Linux) echo "TGZ,DEB" ;;
+    Darwin) echo "TGZ,productbuild" ;;
+    MINGW*|MSYS*|CYGWIN*) echo "ZIP,NSIS" ;;
+    *) echo "TGZ" ;;
+  esac
+}
+
+append_generators() {
+  local raw="$1"
+  local token
+  IFS=',' read -r -a parsed <<< "$raw"
+  for token in "${parsed[@]}"; do
+    token="${token//[[:space:]]/}"
+    [[ -n "$token" ]] || continue
+    GENERATORS+=("$token")
+  done
+}
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -22,8 +42,8 @@ while [[ $# -gt 0 ]]; do
       OUT_DIR="$2"
       shift 2
       ;;
-    --generator)
-      GENERATOR="$2"
+    --generator|--generators)
+      append_generators "$2"
       shift 2
       ;;
     --run-tests)
@@ -41,13 +61,21 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ ${#GENERATORS[@]} -eq 0 ]]; then
+  append_generators "$(platform_default_generators)"
+fi
+
 mkdir -p "$OUT_DIR"
 cmake -S . -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE="$CONFIG"
 cmake --build "$BUILD_DIR" --parallel "$JOBS"
 if [[ "$RUN_TESTS" -eq 1 ]]; then
   ctest --test-dir "$BUILD_DIR" --output-on-failure
 fi
-cpack --config "$BUILD_DIR/CPackConfig.cmake" -G "$GENERATOR" -B "$OUT_DIR"
+
+for generator in "${GENERATORS[@]}"; do
+  echo "Packaging with generator: $generator"
+  cpack --config "$BUILD_DIR/CPackConfig.cmake" -G "$generator" -B "$OUT_DIR"
+done
 
 checksum_cmd=""
 if command -v sha256sum >/dev/null 2>&1; then
@@ -58,9 +86,9 @@ fi
 
 if [[ -n "$checksum_cmd" ]]; then
   rm -f "$OUT_DIR/SHA256SUMS.txt"
-  while IFS= read -r -d '' archive; do
-    eval "$checksum_cmd \"$archive\"" >> "$OUT_DIR/SHA256SUMS.txt"
-  done < <(find "$OUT_DIR" -maxdepth 1 -type f \( -name '*.tar.gz' -o -name '*.zip' -o -name '*.tgz' \) -print0 | sort -z)
+  while IFS= read -r -d '' artifact; do
+    eval "$checksum_cmd \"$artifact\"" >> "$OUT_DIR/SHA256SUMS.txt"
+  done < <(find "$OUT_DIR" -maxdepth 1 -type f \( -name '*.tar.gz' -o -name '*.zip' -o -name '*.tgz' -o -name '*.deb' -o -name '*.pkg' -o -name '*.dmg' -o -name '*.exe' \) -print0 | sort -z)
   echo "wrote $OUT_DIR/SHA256SUMS.txt"
 fi
 

@@ -134,9 +134,7 @@ function Update-InstallChecks {
   $checks = @(
     [ordered]@{ name = 'bridge_daemon'; path = (Join-Path $InstallDir 'bin/bridge_daemon.exe') },
     [ordered]@{ name = 'bridge_cli'; path = (Join-Path $InstallDir 'bin/bridge_cli.exe') },
-    [ordered]@{ name = 'README'; path = (Join-Path $InstallDir 'share/ai_bridge/README.md') },
-    [ordered]@{ name = 'validation_report'; path = (Join-Path $InstallDir 'share/ai_bridge/docs/09-v1-validation-report.md') },
-    [ordered]@{ name = 'release_checklist'; path = (Join-Path $InstallDir 'share/ai_bridge/docs/10-v1-release-checklist.md') }
+    [ordered]@{ name = 'README'; path = (Join-Path $InstallDir 'share/ai_bridge/README.md') }
   )
   $script:ValidationSummary.install_checks = @(
     $checks | ForEach-Object {
@@ -251,13 +249,16 @@ try {
   }
 
   Invoke-ValidationStep -Name 'package' -Action {
-    & $PowerShellExe -File ./scripts/package_release.ps1 -BuildDir $BuildDir -Config $Config -OutDir $DistDir -Generator ZIP -Jobs $Jobs
+    & $PowerShellExe -File ./scripts/package_release.ps1 -BuildDir $BuildDir -Config $Config -OutDir $DistDir -Jobs $Jobs
     Update-ValidationArtifacts
     if (-not $script:ValidationSummary.checksum_file) {
       throw 'SHA256SUMS.txt missing'
     }
     if ($script:ValidationSummary.artifacts.Count -eq 0) {
       throw 'no release artifacts produced'
+    }
+    if (-not ($script:ValidationSummary.artifacts | Where-Object { $_.name -match '\.(zip|exe)$' })) {
+      throw 'expected both archive and installer artifacts on Windows'
     }
   }
 

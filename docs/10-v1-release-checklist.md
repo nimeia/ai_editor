@@ -18,7 +18,7 @@
 - [ ] `./scripts/validate_v1.sh --build-dir build --config Release --jobs 1`
 - [ ] POSIX runtime / audit / history / preview / backup 链路验证通过
 - [ ] POSIX install tree 检查通过
-- [ ] POSIX package 归档与 checksum 生成通过
+- [ ] POSIX archive + native installer 与 checksum 生成通过
 
 ## 3. Windows 验证
 
@@ -41,8 +41,8 @@
 
 ## 5. 打包与发布链路
 
-- [ ] POSIX 归档：`./scripts/package_release.sh --build-dir build --out-dir dist --generator TGZ --jobs 1`
-- [ ] Windows 归档：`pwsh ./scripts/package_release.ps1 -BuildDir build -Config Release -OutDir dist -Generator ZIP -Jobs 1`
+- [ ] POSIX 打包：`./scripts/package_release.sh --build-dir build --out-dir dist --jobs 1`（应产出 archive + native installer）
+- [ ] Windows 打包：`pwsh ./scripts/package_release.ps1 -BuildDir build -Config Release -OutDir dist -Jobs 1`（应产出 ZIP + NSIS installer）
 - [ ] 本地打包输出已生成 `SHA256SUMS.txt` 并校验
 - [ ] GitHub Release 资产中的平台校验文件名无冲突（如 `SHA256SUMS-linux.txt` / `SHA256SUMS-windows.txt`）
 - [ ] `release.yml` 手工触发时 checkout 的 `tag/ref` 与发布目标一致
@@ -52,7 +52,7 @@
 - [ ] 安装目录包含 `bin/bridge_daemon`
 - [ ] 安装目录包含 `bin/bridge_cli`
 - [ ] 安装目录包含 `share/ai_bridge/README.md`
-- [ ] 安装目录包含关键文档与脚本
+- [ ] 安装目录仅包含运行时文件（无内部 docs/scripts/include）
 - [ ] 归档可正常解压，最小 smoke 可运行
 
 ## 7. 风险签收

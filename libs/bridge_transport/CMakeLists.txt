@@ -13,4 +13,3 @@ if(UNIX)
   target_link_libraries(bridge_transport PUBLIC pthread)
 endif()
 
-install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
