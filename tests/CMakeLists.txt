@@ -196,6 +196,12 @@ else()
   set_tests_properties(test_functional_logging_release PROPERTIES ENVIRONMENT "CTEST_OUTPUT_ON_FAILURE=1")
 
   add_test(
+    NAME test_functional_posix_native_package
+    COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/functional_posix_native_package.sh ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}/dist_native_package
+  )
+  set_tests_properties(test_functional_posix_native_package PROPERTIES ENVIRONMENT "CTEST_OUTPUT_ON_FAILURE=1")
+
+  add_test(
     NAME test_functional_cli_contract
     COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/functional_cli_contract.sh $<TARGET_FILE:bridge_daemon> $<TARGET_FILE:bridge_cli> ${CMAKE_CURRENT_BINARY_DIR}
   )

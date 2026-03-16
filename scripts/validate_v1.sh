@@ -116,11 +116,17 @@ cmake --install "$BUILD_DIR" --prefix "$INSTALL_DIR"
 test -x "$INSTALL_DIR/bin/bridge_daemon"
 test -x "$INSTALL_DIR/bin/bridge_cli"
 test -f "$INSTALL_DIR/share/ai_bridge/README.md"
-test -f "$INSTALL_DIR/share/ai_bridge/docs/09-v1-validation-report.md"
-test -f "$INSTALL_DIR/share/ai_bridge/docs/10-v1-release-checklist.md"
 
-bash ./scripts/package_release.sh --build-dir "$BUILD_DIR" --config "$CONFIG" --out-dir "$DIST_DIR" --generator TGZ --jobs "$JOBS"
+bash ./scripts/package_release.sh --build-dir "$BUILD_DIR" --config "$CONFIG" --out-dir "$DIST_DIR" --jobs "$JOBS"
 test -f "$DIST_DIR/SHA256SUMS.txt"
 find "$DIST_DIR" -maxdepth 1 -type f \( -name '*.tar.gz' -o -name '*.tgz' \) -print -quit | grep -q .
+case "$(uname -s)" in
+  Linux)
+    find "$DIST_DIR" -maxdepth 1 -type f -name '*.deb' -print -quit | grep -q .
+    ;;
+  Darwin)
+    find "$DIST_DIR" -maxdepth 1 -type f -name '*.pkg' -print -quit | grep -q .
+    ;;
+esac
 
 echo "P6 validation complete"

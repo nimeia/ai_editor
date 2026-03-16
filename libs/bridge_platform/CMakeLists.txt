@@ -10,4 +10,3 @@ endif()
 
 target_include_directories(bridge_platform PUBLIC include)
 
-install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})

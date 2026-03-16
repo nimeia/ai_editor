@@ -44,8 +44,8 @@ cmake --install "$BUILD_DIR" --prefix "$INSTALL_DIR" >/dev/null
 [[ -x "$INSTALL_DIR/bin/bridge_daemon" ]] || bridge_fail 'installed bridge_daemon missing'
 [[ -x "$INSTALL_DIR/bin/bridge_cli" ]] || bridge_fail 'installed bridge_cli missing'
 [[ -f "$INSTALL_DIR/share/ai_bridge/README.md" ]] || bridge_fail 'installed README missing'
-[[ -f "$INSTALL_DIR/share/ai_bridge/docs/09-v1-validation-report.md" ]] || bridge_fail 'installed validation report missing'
-[[ -f "$INSTALL_DIR/share/ai_bridge/docs/10-v1-release-checklist.md" ]] || bridge_fail 'installed release checklist missing'
+[[ ! -d "$INSTALL_DIR/share/ai_bridge/docs" ]] || bridge_fail 'runtime install should not ship internal docs bundle'
+[[ ! -d "$INSTALL_DIR/share/ai_bridge/scripts" ]] || bridge_fail 'runtime install should not ship packaging scripts'
 mkdir -p "$DIST_DIR"
 (
   cd "$SOURCE_ROOT"

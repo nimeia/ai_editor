@@ -60,16 +60,14 @@ try {
   $installedDaemon = Join-Path $InstallDir 'bin/bridge_daemon.exe'
   $installedCli = Join-Path $InstallDir 'bin/bridge_cli.exe'
   $installedReadme = Join-Path $InstallDir 'share/ai_bridge/README.md'
-  $installedValidation = Join-Path $InstallDir 'share/ai_bridge/docs/09-v1-validation-report.md'
-  $installedChecklist = Join-Path $InstallDir 'share/ai_bridge/docs/10-v1-release-checklist.md'
-  $installedSmokeScript = Join-Path $InstallDir 'share/ai_bridge/scripts/windows_smoke.ps1'
+  $installedDocsDir = Join-Path $InstallDir 'share/ai_bridge/docs'
+  $installedScriptsDir = Join-Path $InstallDir 'share/ai_bridge/scripts'
 
   Assert-PathExists $installedDaemon 'installed daemon should exist'
   Assert-PathExists $installedCli 'installed cli should exist'
   Assert-PathExists $installedReadme 'installed README should exist'
-  Assert-PathExists $installedValidation 'installed validation report should exist'
-  Assert-PathExists $installedChecklist 'installed release checklist should exist'
-  Assert-PathExists $installedSmokeScript 'installed smoke script should exist'
+  if (Test-Path $installedDocsDir) { throw 'installed runtime package should not contain internal docs bundle' }
+  if (Test-Path $installedScriptsDir) { throw 'installed runtime package should not contain packaging scripts' }
 
   $installedCliVersion = & $installedCli --version
   if ($LASTEXITCODE -ne 0) { throw 'installed bridge_cli --version failed' }
@@ -99,7 +97,7 @@ try {
 
   Push-Location $RepoRoot
   try {
-    & (Join-Path $RepoRoot 'scripts/package_release.ps1') -BuildDir $BuildDir -Config $Config -OutDir $DistDir -Generator ZIP -Jobs 1
+    & (Join-Path $RepoRoot 'scripts/package_release.ps1') -BuildDir $BuildDir -Config $Config -OutDir $DistDir -Jobs 1
   }
   finally {
     Pop-Location
@@ -111,8 +109,12 @@ try {
   Assert-Contains $hashText 'ai_bridge-' 'checksum file should mention ai_bridge archive'
 
   $archives = Get-ChildItem -Path $DistDir -File | Where-Object { $_.Extension -eq '.zip' } | Sort-Object Name
+  $installers = Get-ChildItem -Path $DistDir -File | Where-Object { $_.Extension -eq '.exe' -and $_.Name -match 'ai_bridge-' } | Sort-Object Name
   if ($archives.Count -lt 1) {
     throw 'expected at least one ZIP archive from package_release.ps1'
+  }
+  if ($installers.Count -lt 1) {
+    throw 'expected at least one NSIS installer from package_release.ps1'
   }
 
   $archive = $archives[0]
@@ -121,16 +123,16 @@ try {
   $packagedDaemon = Get-ChildItem -Path $ExtractDir -Recurse -Filter 'bridge_daemon.exe' | Select-Object -First 1
   $packagedCli = Get-ChildItem -Path $ExtractDir -Recurse -Filter 'bridge_cli.exe' | Select-Object -First 1
   $packagedReadme = Get-ChildItem -Path $ExtractDir -Recurse -Filter 'README.md' | Where-Object { $_.FullName -match 'share[\\/]ai_bridge' } | Select-Object -First 1
-  $packagedValidation = Get-ChildItem -Path $ExtractDir -Recurse -Filter '09-v1-validation-report.md' | Select-Object -First 1
-  $packagedChecklist = Get-ChildItem -Path $ExtractDir -Recurse -Filter '10-v1-release-checklist.md' | Select-Object -First 1
-  $packagedSmoke = Get-ChildItem -Path $ExtractDir -Recurse -Filter 'windows_smoke.ps1' | Select-Object -First 1
+  $packagedIncludeDir = Get-ChildItem -Path $ExtractDir -Recurse -Directory | Where-Object { $_.Name -eq 'include' } | Select-Object -First 1
+  $packagedDocsDir = Get-ChildItem -Path $ExtractDir -Recurse -Directory | Where-Object { $_.FullName -match 'share[\/]ai_bridge[\/]docs$' } | Select-Object -First 1
+  $packagedScriptsDir = Get-ChildItem -Path $ExtractDir -Recurse -Directory | Where-Object { $_.FullName -match 'share[\/]ai_bridge[\/]scripts$' } | Select-Object -First 1
 
   if ($null -eq $packagedDaemon) { throw 'packaged archive missing bridge_daemon.exe' }
   if ($null -eq $packagedCli) { throw 'packaged archive missing bridge_cli.exe' }
   if ($null -eq $packagedReadme) { throw 'packaged archive missing README.md under share/ai_bridge' }
-  if ($null -eq $packagedValidation) { throw 'packaged archive missing validation report' }
-  if ($null -eq $packagedChecklist) { throw 'packaged archive missing release checklist' }
-  if ($null -eq $packagedSmoke) { throw 'packaged archive missing windows_smoke.ps1' }
+  if ($null -ne $packagedIncludeDir) { throw 'packaged runtime archive should not contain development headers' }
+  if ($null -ne $packagedDocsDir) { throw 'packaged runtime archive should not contain internal docs bundle' }
+  if ($null -ne $packagedScriptsDir) { throw 'packaged runtime archive should not contain packaging scripts' }
 }
 catch {
   Show-BridgeDiagnostics

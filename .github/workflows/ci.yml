@@ -38,6 +38,13 @@ jobs:
           ctest --version
           python3 --version
 
+      - name: Install packaging dependencies
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fakeroot dpkg-dev
+
       - name: Validate V1 baseline
         shell: bash
         run: bash ./scripts/validate_v1.sh --build-dir build --config Release --jobs 1
@@ -154,6 +161,10 @@ jobs:
           ctest --version
           python --version
           gh --version
+
+      - name: Install packaging dependencies
+        shell: pwsh
+        run: choco install nsis -y --no-progress
 
       - name: Validate V1 baseline
         shell: pwsh
